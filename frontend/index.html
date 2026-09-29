@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f2eb">
+  <title>Talk2Book | Reception</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #f4f2eb;
+      --ink: #202722;
+      --muted: #747a70;
+      --line: #d9dbd0;
+      --green: #245c46;
+      --lime: #c6e078;
+      --coral: #df765d;
+      --white: #fffefa;
+      font-family: "Manrope", sans-serif;
+      font-synthesis: none;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; min-height: 100vh; background: var(--paper); color: var(--ink); }
+    button { font: inherit; }
+    .shell { max-width: 1180px; min-height: 100vh; margin: 0 auto; padding: 0 36px 32px; display: flex; flex-direction: column; }
+    header { min-height: 84px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); }
+    .brand { display: flex; align-items: center; gap: 12px; font-size: 15px; font-weight: 800; letter-spacing: 0; }
+    .brand-mark { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: var(--green); color: var(--lime); }
+    .brand-mark svg { width: 19px; height: 19px; }
+    .header-meta, .eyebrow, .mono { font-family: "DM Mono", monospace; }
+    .header-meta { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0; }
+    main { flex: 1; display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(280px, .75fr); gap: 50px; padding: 48px 0 36px; }
+    .desk { display: flex; flex-direction: column; min-height: 610px; }
+    .eyebrow { color: var(--green); font-size: 11px; text-transform: uppercase; }
+    h1 { max-width: 600px; margin: 12px 0 10px; font-size: clamp(32px, 4.2vw, 53px); line-height: 1.04; letter-spacing: 0; }
+    .subhead { margin: 0; color: var(--muted); font-size: 14px; }
+    .session { margin-top: 34px; flex: 1; display: flex; flex-direction: column; background: var(--white); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+    .session-top { height: 48px; padding: 0 18px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); }
+    .session-label { color: var(--muted); font: 11px "DM Mono", monospace; text-transform: uppercase; }
+    .status { display: flex; align-items: center; gap: 8px; color: var(--muted); font: 11px "DM Mono", monospace; text-transform: uppercase; }
+    .status-dot { width: 7px; height: 7px; background: #a6aa9f; border-radius: 50%; }
+    .status[data-state="listening"] .status-dot { background: #53a86f; box-shadow: 0 0 0 3px #53a86f22; }
+    .status[data-state="ready_to_send"] .status-dot { background: var(--coral); }
+      .status[data-state="finalizing"] .status-dot { background: var(--coral); }
+    .status[data-state="thinking"] .status-dot, .status[data-state="speaking"] .status-dot { background: var(--coral); }
+    .transcript { flex: 1; min-height: 260px; max-height: 410px; overflow: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+    .empty { margin: auto; color: #989c91; font-size: 13px; text-align: center; }
+    .line { max-width: 84%; font-size: 13px; line-height: 1.6; animation: arrive .22s ease-out both; }
+    .line.user { align-self: flex-end; padding: 10px 13px; color: var(--white); background: var(--green); border-radius: 8px 8px 2px 8px; }
+    .line.agent { align-self: flex-start; padding: 10px 13px; background: #eeeee7; border-radius: 8px 8px 8px 2px; }
+    .line.partial { opacity: .55; }
+    @keyframes arrive { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    .controls { min-height: 154px; padding: 20px; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 22px; border-top: 1px solid var(--line); }
+    .button-group { display: flex; align-items: center; gap: 10px; }
+    .visualizer-wrap { min-width: 0; }
+    .visualizer { display: block; width: 100%; height: 60px; }
+    .hint { margin-top: 7px; color: var(--muted); font-size: 11px; }
+    .mic-button { width: 68px; height: 68px; display: grid; place-items: center; border: 0; border-radius: 50%; color: var(--white); background: var(--green); cursor: pointer; transition: transform .18s ease, background .18s ease; }
+    .mic-button:hover { transform: scale(1.04); }
+    .mic-button[aria-pressed="true"] { color: var(--ink); background: var(--lime); }
+    .mic-button:disabled { cursor: wait; opacity: .6; }
+    .mic-button svg { width: 25px; height: 25px; }
+    .send-button { width: 46px; height: 46px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%; color: var(--green); background: #eeeee7; cursor: pointer; }
+    .send-button:hover:not(:disabled) { background: var(--lime); }
+    .send-button:disabled { cursor: default; opacity: .4; }
+    .send-button svg { width: 19px; height: 19px; }
+    .side { padding-top: 7px; }
+    .side h2 { margin: 10px 0 20px; font-size: 19px; letter-spacing: 0; }
+    .tool-list { border-top: 1px solid var(--line); }
+    .tool-row { padding: 15px 0; display: grid; grid-template-columns: 30px 1fr; gap: 11px; border-bottom: 1px solid var(--line); }
+    .tool-number { color: var(--coral); font: 11px "DM Mono", monospace; }
+    .tool-name { font-size: 13px; font-weight: 700; }
+    .tool-desc { margin-top: 4px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+    .activity { margin-top: 32px; }
+    .activity h3 { margin: 0 0 12px; color: var(--muted); font: 11px "DM Mono", monospace; font-weight: 400; text-transform: uppercase; }
+    .activity-list { display: flex; flex-direction: column; gap: 8px; }
+    .activity-item { padding: 11px 12px; border-left: 2px solid var(--lime); background: #ebece3; font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
+    .activity-item strong { font-family: "DM Mono", monospace; font-weight: 500; }
+    .notice { margin-top: 25px; padding: 13px; color: #5f655c; background: #e9e8df; border-radius: 6px; font-size: 11px; line-height: 1.55; }
+    footer { padding-top: 16px; display: flex; justify-content: space-between; gap: 16px; color: var(--muted); border-top: 1px solid var(--line); font: 10px "DM Mono", monospace; text-transform: uppercase; }
+    @media (max-width: 760px) {
+      .shell { padding: 0 18px 22px; }
+      header { min-height: 68px; }
+      main { grid-template-columns: 1fr; gap: 34px; padding: 34px 0 28px; }
+      .desk { min-height: 560px; }
+      h1 { font-size: 37px; }
+      .side { padding: 0 2px; }
+      .tool-row { grid-template-columns: 30px 1fr; }
+      footer { flex-wrap: wrap; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12a8 8 0 0 1 16 0v4a3 3 0 0 1-3 3h-2v-6h5M4 13h5v6H7a3 3 0 0 1-3-3z"/><path d="M12 3v3m-3-2 1 2m5-2-1 2"/></svg></span>Talk2Book</div>
+      <div class="header-meta">Voice receptionist <span aria-hidden="true">/</span> Live session</div>
+    </header>
+    <main>
+      <section class="desk" aria-labelledby="title">
+        <div class="eyebrow">Appointment desk / 01</div>
+        <h1 id="title">Good morning.<br>How can we help?</h1>
+        <p class="subhead">Talk naturally to check availability or reserve a visit.</p>
+        <div class="session">
+          <div class="session-top">
+            <span class="session-label">Conversation</span>
+            <span class="status" id="status" data-state="idle"><span class="status-dot"></span><span id="status-text">Ready</span></span>
+          </div>
+          <div class="transcript" id="transcript" aria-live="polite" aria-label="Conversation transcript">
+            <p class="empty" id="empty">Your conversation will appear here.</p>
+          </div>
+          <div class="controls">
+            <div class="visualizer-wrap">
+              <canvas class="visualizer" id="wave" aria-label="Microphone level"></canvas>
+              <div class="hint" id="hint">Microphone is off</div>
+            </div>
+            <div class="button-group">
+              <button class="send-button" id="send" type="button" aria-label="Send transcript" title="Send transcript" disabled>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+              </button>
+              <button class="mic-button" id="mic" type="button" aria-label="Start voice session" aria-pressed="false" title="Start voice session">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3m-4 0h8"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+      <aside class="side" aria-label="Reception tools">
+        <div class="eyebrow">Available actions</div>
+        <h2>Calendar tools</h2>
+        <div class="tool-list">
+          <div class="tool-row"><div class="tool-number">01</div><div><div class="tool-name">Check availability</div><div class="tool-desc">Find open half-hour slots by date and time of day.</div></div></div>
+          <div class="tool-row"><div class="tool-number">02</div><div><div class="tool-name">Book an appointment</div><div class="tool-desc">Reserve a slot and return a confirmation, or flag a conflict.</div></div></div>
+        </div>
+        <section class="activity" aria-live="polite">
+          <h3>Tool activity</h3>
+          <div class="activity-list" id="activity"><div class="activity-item">Calendar activity will be logged here.</div></div>
+        </section>
+        <div class="notice">This demo uses a local mock calendar. Avoid sharing sensitive personal or medical information.</div>
+      </aside>
+    </main>
+    <footer><span>Streaming STT / LLM / TTS</span><span>Enable the mic for each new query</span></footer>
+  </div>
+  <script>
+    const micButton = document.querySelector("#mic");
+    const sendButton = document.querySelector("#send");
+    const statusEl = document.querySelector("#status");
+    const statusText = document.querySelector("#status-text");
+    const transcriptEl = document.querySelector("#transcript");
+    const activityEl = document.querySelector("#activity");
+    const hintEl = document.querySelector("#hint");
+    const canvas = document.querySelector("#wave");
+    const canvasContext = canvas.getContext("2d");
+    let socket;
+    let audioContext;
+    let mediaStream;
+    let processor;
+    let source;
+    let playbackTime = 0;
+    let speaking = false;
+    let voiceFrames = 0;
+    let transcriptLine;
+    let currentTranscript = "";
+    let finalizedTranscript = "";
+    let interimTranscript = "";
+    let transcriptReady = false;
+    let audioSending = false;
+    let heardSpeech = false;
+    let lastSpeechAt = 0;
+    let silenceTimeoutMs = 1200;
+    let finalizeFallbackTimer;
+    let awaitingReply = false;
+    let assistantTurnFinished = false;
+    let pendingAudio = 0;
+    let animationFrame;
+    const activeSources = new Set();
+
+    function setStatus(value) {
+      const names = { idle: "Ready", connecting: "Connecting", listening: "Listening", finalizing: "Finalizing", ready_to_send: "Ready to send", thinking: "Thinking", speaking: "Speaking", microphone_off: "Microphone off", error: "Connection issue" };
+      statusEl.dataset.state = value;
+      statusText.textContent = names[value] || value;
+      hintEl.textContent = value === "listening" ? "Speak, pause, or press the mic button to finish the phrase" : value === "finalizing" ? "Finishing your transcript…" : value === "ready_to_send" ? "Transcript ready. Press Send to get a response." : value === "thinking" ? "Preparing your response…" : value === "speaking" ? "Response playing; mic is off" : value === "microphone_off" ? "Click the mic to start your next query" : value === "connecting" ? "Opening secure audio connection…" : value === "error" ? "Check the message above and your connection" : "Microphone is off";
+    }
+
+    function addLine(text, who, partial = false) {
+      document.querySelector("#empty")?.remove();
+      if (who === "user" && partialLine) {
+        partialLine.remove();
+        partialLine = null;
+      }
+      const line = document.createElement("div");
+      line.className = `line ${who}${partial ? " partial" : ""}`;
+      line.textContent = text;
+      transcriptEl.append(line);
+      transcriptEl.scrollTop = transcriptEl.scrollHeight;
+      if (partial) partialLine = line;
+    }
+
+    function addActivity(name, result) {
+      if (activityEl.children.length === 1 && activityEl.textContent.includes("will be logged")) activityEl.replaceChildren();
+      const item = document.createElement("div");
+      item.className = "activity-item";
+      const summary = result.success === false ? result.error : result.available_slots ? `${result.available_slots.length} open slots on ${result.date}` : `Confirmed ${result.date} at ${result.time}`;
+      const title = document.createElement("strong");
+      title.textContent = name.replaceAll("_", " ");
+      const detail = document.createElement("div");
+      detail.textContent = summary;
+      item.append(title, detail);
+      activityEl.prepend(item);
+    }
+
+    function downsample(input, inputRate, outputRate) {
+      if (outputRate === inputRate) return input;
+      const ratio = inputRate / outputRate;
+      const output = new Float32Array(Math.floor(input.length / ratio));
+      for (let index = 0; index < output.length; index++) {
+        const start = Math.floor(index * ratio);
+        const end = Math.min(Math.floor((index + 1) * ratio), input.length);
+        let sum = 0;
+        for (let sample = start; sample < end; sample++) sum += input[sample];
+        output[index] = sum / Math.max(1, end - start);
+      }
+      return output;
+    }
+
+    function toPcm16(samples) {
+      const buffer = new ArrayBuffer(samples.length * 2);
+      const view = new DataView(buffer);
+      for (let index = 0; index < samples.length; index++) {
+        const sample = Math.max(-1, Math.min(1, samples[index]));
+        view.setInt16(index * 2, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+      }
+      return buffer;
+    }
+
+    function drawLevel(samples) {
+      const rect = canvas.getBoundingClientRect();
+      const scale = window.devicePixelRatio || 1;
+      if (canvas.width !== Math.round(rect.width * scale) || canvas.height !== Math.round(rect.height * scale)) {
+        canvas.width = Math.round(rect.width * scale);
+        canvas.height = Math.round(rect.height * scale);
+      }
+      canvasContext.clearRect(0, 0, canvas.width, canvas.height);
+      const bars = 40;
+      const gap = 4 * scale;
+      const width = (canvas.width - gap * (bars - 1)) / bars;
+      let energy = 0;
+      for (const sample of samples) energy += sample * sample;
+      const rms = Math.sqrt(energy / Math.max(1, samples.length));
+      for (let index = 0; index < bars; index++) {
+        const wobble = .12 + Math.abs(Math.sin(index * .61 + performance.now() * .004)) * rms * 7;
+        const height = Math.max(3 * scale, Math.min(canvas.height * .88, wobble * canvas.height));
+        canvasContext.fillStyle = rms > .018 ? "#245c46" : "#c4c8bb";
+        canvasContext.fillRect(index * (width + gap), (canvas.height - height) / 2, width, height);
+      }
+      if (speaking && rms > .045) voiceFrames++;
+      else voiceFrames = Math.max(0, voiceFrames - 1);
+      if (speaking && voiceFrames >= 3) {
+        stopPlayback();
+        speaking = false;
+        voiceFrames = 0;
+        socket?.send(JSON.stringify({ type: "barge_in" }));
+        setStatus("listening");
+      }
+      return rms;
+    }
+
+    function stopPlayback() {
+      for (const audioSource of activeSources) {
+        try { audioSource.stop(); } catch (_) { /* already ended */ }
+      }
+      activeSources.clear();
+      playbackTime = audioContext?.currentTime || 0;
+    }
+
+    async function queueAudio(encoded) {
+      const binary = atob(encoded);
+      const bytes = new Uint8Array(binary.length);
+      for (let index = 0; index < binary.length; index++) bytes[index] = binary.charCodeAt(index);
+      const decoded = await audioContext.decodeAudioData(bytes.buffer);
+      const audioSource = audioContext.createBufferSource();
+      audioSource.buffer = decoded;
+      audioSource.connect(audioContext.destination);
+      const startAt = Math.max(audioContext.currentTime + .025, playbackTime);
+      playbackTime = startAt + decoded.duration;
+      activeSources.add(audioSource);
+      audioSource.onended = () => {
+        activeSources.delete(audioSource);
+        if (activeSources.size === 0) {
+          speaking = false;
+          if (awaitingReply && assistantTurnFinished) enableMicAfterReply();
+          else if (micButton.getAttribute("aria-pressed") === "true") setStatus("listening");
+        }
+      };
+      audioSource.start(startAt);
+      speaking = true;
+      setStatus("speaking");
+    }
+
+    function enableMicAfterReply() {
+      if (!awaitingReply || !assistantTurnFinished || activeSources.size || pendingAudio) return;
+      awaitingReply = false;
+      micButton.disabled = false;
+      micButton.setAttribute("aria-pressed", "false");
+      micButton.setAttribute("aria-label", "Start listening for next query");
+      micButton.title = "Start listening for next query";
+      micButton.classList.remove("active");
+      setStatus("microphone_off");
+    }
+
+    function armMicrophone() {
+      if (!mediaStream || socket?.readyState !== WebSocket.OPEN) {
+        startSession();
+        return;
+      }
+      mediaStream.getAudioTracks().forEach((track) => { track.enabled = true; });
+      audioSending = true;
+      heardSpeech = false;
+      lastSpeechAt = 0;
+      micButton.disabled = false;
+      micButton.setAttribute("aria-pressed", "true");
+      micButton.setAttribute("aria-label", "Finish current phrase");
+      micButton.title = "Finish current phrase";
+      micButton.classList.add("active");
+      setStatus("listening");
+    }
+
+    async function startSession() {
+      micButton.disabled = true;
+      setStatus("connecting");
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+        audioContext = new AudioContext();
+        await audioContext.resume();
+        const protocol = location.protocol === "https:" ? "wss:" : "ws:";
+        socket = new WebSocket(`${protocol}//${location.host}/ws`);
+        socket.binaryType = "arraybuffer";
+        socket.onmessage = async (event) => {
+          const message = JSON.parse(event.data);
+          if (message.type === "config") silenceTimeoutMs = message.silence_timeout_ms || silenceTimeoutMs;
+          else if (message.type === "status") {
+            if (message.value === "listening" && awaitingReply) {
+              assistantTurnFinished = true;
+              enableMicAfterReply();
+            } else {
+              setStatus(message.value);
+            }
+            if (message.value === "ready_to_send" && currentTranscript.trim()) {
+              transcriptReady = true;
+              sendButton.disabled = false;
+            }
+          }
+          else if (message.type === "transcript") {
+            if (message.final) {
+              finalizedTranscript = [finalizedTranscript, message.text.trim()].filter(Boolean).join(" ");
+              interimTranscript = "";
+            } else {
+              interimTranscript = message.text.trim();
+            }
+            currentTranscript = [finalizedTranscript, interimTranscript].filter(Boolean).join(" ").trim();
+            transcriptReady = Boolean(finalizedTranscript);
+            if (message.final) {
+              clearTimeout(finalizeFallbackTimer);
+              audioSending = false;
+              mediaStream?.getAudioTracks().forEach((track) => { track.enabled = false; });
+              micButton.disabled = true;
+            }
+            sendButton.disabled = !transcriptReady || !currentTranscript.trim();
+            document.querySelector("#empty")?.remove();
+            if (!transcriptLine) {
+              transcriptLine = document.createElement("div");
+              transcriptEl.append(transcriptLine);
+            }
+            transcriptLine.className = `line user${transcriptReady ? "" : " partial"}`;
+            transcriptLine.textContent = currentTranscript;
+            transcriptEl.scrollTop = transcriptEl.scrollHeight;
+          } else if (message.type === "audio") {
+            addLine(message.text, "agent");
+            pendingAudio++;
+            try {
+              await queueAudio(message.audio);
+            } finally {
+              pendingAudio--;
+              if (awaitingReply && assistantTurnFinished) enableMicAfterReply();
+            }
+          }
+          else if (message.type === "tool_result") addActivity(message.name, message.result);
+          else if (message.type === "turn_complete") speaking = activeSources.size > 0;
+          else if (message.type === "error") { addLine(message.message, "agent"); stopSession(); setStatus("error"); }
+        };
+        socket.onerror = () => { addLine("The voice service couldn't connect. Check your network and try again.", "agent"); stopSession(); setStatus("error"); };
+        socket.onclose = () => { if (micButton.getAttribute("aria-pressed") === "true") stopSession(); };
+        socket.onopen = () => {
+          source = audioContext.createMediaStreamSource(mediaStream);
+          processor = audioContext.createScriptProcessor(4096, 1, 1);
+          processor.onaudioprocess = (event) => {
+            const input = event.inputBuffer.getChannelData(0);
+            const level = drawLevel(input);
+            if (audioSending) {
+              const now = performance.now();
+              if (level > .015) {
+                heardSpeech = true;
+                lastSpeechAt = now;
+              } else if (heardSpeech && now - lastSpeechAt >= silenceTimeoutMs) {
+                finishCurrentPhrase();
+              }
+            }
+            if (audioSending && socket?.readyState === WebSocket.OPEN) socket.send(toPcm16(downsample(input, audioContext.sampleRate, 16000)));
+          };
+          source.connect(processor);
+          processor.connect(audioContext.destination);
+          audioSending = true;
+          setStatus("listening");
+          micButton.disabled = false;
+          micButton.setAttribute("aria-pressed", "true");
+          micButton.setAttribute("aria-label", "Finish current phrase");
+          micButton.title = "Finish current phrase";
+          micButton.classList.add("active");
+        };
+      } catch (error) {
+        addLine("Microphone access isn't available. Allow microphone access in your browser settings, then try again.", "agent");
+        stopSession();
+        setStatus("error");
+      }
+    }
+
+    function stopSession() {
+      cancelAnimationFrame(animationFrame);
+      processor?.disconnect();
+      source?.disconnect();
+      mediaStream?.getTracks().forEach((track) => track.stop());
+      if (socket && socket.readyState < WebSocket.CLOSING) socket.close();
+      stopPlayback();
+      audioContext?.close();
+      socket = audioContext = mediaStream = processor = source = undefined;
+      speaking = false;
+      audioSending = false;
+      heardSpeech = false;
+      awaitingReply = false;
+      assistantTurnFinished = false;
+      pendingAudio = 0;
+      clearTimeout(finalizeFallbackTimer);
+      currentTranscript = "";
+      finalizedTranscript = "";
+      interimTranscript = "";
+      transcriptLine = null;
+      transcriptReady = false;
+      sendButton.disabled = true;
+      micButton.disabled = false;
+      micButton.setAttribute("aria-pressed", "false");
+      micButton.setAttribute("aria-label", "Start voice session");
+      micButton.title = "Start voice session";
+      micButton.classList.remove("active");
+      setStatus("idle");
+    }
+
+    function finishCurrentPhrase() {
+      if (!audioSending || socket?.readyState !== WebSocket.OPEN) return;
+      audioSending = false;
+      heardSpeech = false;
+      mediaStream?.getAudioTracks().forEach((track) => { track.enabled = false; });
+      micButton.disabled = true;
+      socket.send(JSON.stringify({ type: "finalize_transcript" }));
+      setStatus("finalizing");
+      clearTimeout(finalizeFallbackTimer);
+      finalizeFallbackTimer = setTimeout(() => {
+        if (transcriptReady || socket?.readyState !== WebSocket.OPEN) return;
+        const transcript = currentTranscript.trim();
+        if (transcript) {
+          currentTranscript = transcript;
+          finalizedTranscript = transcript;
+          interimTranscript = "";
+          transcriptReady = true;
+          document.querySelector("#empty")?.remove();
+          if (!transcriptLine) {
+            transcriptLine = document.createElement("div");
+            transcriptEl.append(transcriptLine);
+          }
+          transcriptLine.className = "line user";
+          transcriptLine.textContent = transcript;
+          transcriptEl.scrollTop = transcriptEl.scrollHeight;
+          sendButton.disabled = false;
+          setStatus("ready_to_send");
+        } else {
+          addLine("I didn't catch that phrase. Please try again.", "agent");
+          audioSending = true;
+          mediaStream?.getAudioTracks().forEach((track) => { track.enabled = true; });
+          micButton.disabled = false;
+          micButton.setAttribute("aria-pressed", "true");
+          micButton.setAttribute("aria-label", "Finish current phrase");
+          micButton.title = "Finish current phrase";
+          micButton.classList.add("active");
+          setStatus("listening");
+        }
+      }, 2500);
+    }
+
+    function sendTranscript() {
+      const transcript = currentTranscript.trim();
+      if (!transcriptReady || !transcript || socket?.readyState !== WebSocket.OPEN) return;
+      socket.send(JSON.stringify({ type: "submit_transcript", text: transcript }));
+      if (transcriptLine) {
+        transcriptLine.className = "line user";
+        transcriptLine = null;
+      }
+      currentTranscript = "";
+      finalizedTranscript = "";
+      interimTranscript = "";
+      transcriptReady = false;
+      audioSending = false;
+      heardSpeech = false;
+      lastSpeechAt = 0;
+      mediaStream?.getAudioTracks().forEach((track) => { track.enabled = false; });
+      awaitingReply = true;
+      assistantTurnFinished = false;
+      micButton.disabled = true;
+      micButton.setAttribute("aria-pressed", "false");
+      micButton.setAttribute("aria-label", "Microphone off while assistant responds");
+      micButton.title = "Microphone off while assistant responds";
+      micButton.classList.remove("active");
+      sendButton.disabled = true;
+      setStatus("thinking");
+    }
+
+    micButton.addEventListener("click", () => micButton.getAttribute("aria-pressed") === "true" ? finishCurrentPhrase() : armMicrophone());
+    sendButton.addEventListener("click", sendTranscript);
+    window.addEventListener("resize", () => { canvas.width = 0; });
+    setStatus("idle");
+  </script>
+</body>
+</html>

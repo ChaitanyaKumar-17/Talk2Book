@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: talk2book
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: DEEPGRAM_API_KEY
+        sync: false
+      - key: CALENDAR_DB_PATH
+        value: /app/data/calendar.sqlite3

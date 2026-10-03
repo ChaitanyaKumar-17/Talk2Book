@@ -195,11 +195,81 @@
       "stt_to_llm_ms": 0.3,
       "llm_time_to_first_token_ms": 669.8,
       "tts_synthesis_seconds": 2.294
+    },
+    {
+      "turn_id": "6d316d37-82aa-4891-9351-fafb3ba19818",
+      "time_to_first_audio_ms": 5151.1,
+      "stt_to_llm_ms": 0.5,
+      "llm_time_to_first_token_ms": 1039.5,
+      "tts_synthesis_seconds": 3.351
+    },
+    {
+      "turn_id": "1dd1977f-0ed4-426c-816f-939661cbc5bf",
+      "time_to_first_audio_ms": 2709.4,
+      "stt_to_llm_ms": 0.4,
+      "llm_time_to_first_token_ms": 595.7,
+      "tts_synthesis_seconds": 1.965
+    },
+    {
+      "turn_id": "c3f141e0-7415-4507-968b-93db07c15dca",
+      "time_to_first_audio_ms": 2967.1,
+      "stt_to_llm_ms": 0.4,
+      "llm_time_to_first_token_ms": 807.4,
+      "tts_synthesis_seconds": 5.062
+    },
+    {
+      "turn_id": "5462e5bb-a0c0-44ca-9e20-b23c51a87022",
+      "time_to_first_audio_ms": 2543.9,
+      "stt_to_llm_ms": 0.8,
+      "llm_time_to_first_token_ms": 820.7,
+      "tts_synthesis_seconds": 1.718
+    },
+    {
+      "turn_id": "61fba8e4-7d77-4058-b7c5-c6e884ffef2a",
+      "time_to_first_audio_ms": 1792.2,
+      "stt_to_llm_ms": 0.4,
+      "llm_time_to_first_token_ms": 862.6,
+      "tts_synthesis_seconds": 1.952
+    },
+    {
+      "turn_id": "4db9be9f-a285-486e-8688-dc4fce489bf1",
+      "time_to_first_audio_ms": 2247.1,
+      "stt_to_llm_ms": 0.4,
+      "llm_time_to_first_token_ms": 710.6,
+      "tts_synthesis_seconds": 1.475
+    },
+    {
+      "turn_id": "4e3be4e8-73ff-4cfd-b575-09430b022dbf",
+      "time_to_first_audio_ms": 2346.5,
+      "stt_to_llm_ms": 0.4,
+      "llm_time_to_first_token_ms": 779.1,
+      "tts_synthesis_seconds": 2.661
+    },
+    {
+      "turn_id": "2113aa69-8891-4efd-ae0a-b7573ded6f2d",
+      "time_to_first_audio_ms": 2241.8,
+      "stt_to_llm_ms": 0.4,
+      "llm_time_to_first_token_ms": 948.9,
+      "tts_synthesis_seconds": 1.237
+    },
+    {
+      "turn_id": "d77cc847-43ff-44df-8cf3-7b05624078c1",
+      "time_to_first_audio_ms": 3551.9,
+      "stt_to_llm_ms": 0.3,
+      "llm_time_to_first_token_ms": 954.7,
+      "tts_synthesis_seconds": 2.834
+    },
+    {
+      "turn_id": "066f5509-fc1d-48f8-922a-3aef9a21c15e",
+      "time_to_first_audio_ms": 2425.6,
+      "stt_to_llm_ms": 0.4,
+      "llm_time_to_first_token_ms": 867.6,
+      "tts_synthesis_seconds": 2.836
     }
   ],
   "summary": {
-    "completed_turns": 25,
-    "median_time_to_first_audio_ms": 3290.7,
+    "completed_turns": 35,
+    "median_time_to_first_audio_ms": 2867.9,
     "p95_time_to_first_audio_ms": 35837.1
   }
 }

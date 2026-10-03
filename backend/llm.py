@@ -20,7 +20,7 @@ TOOL_DEFINITIONS = [
         "type": "function",
         "function": {
             "name": "check_availability",
-            "description": "Check open one-hour turf booking slots and exact prices for a date and session.",
+            "description": "Check open one-hour turf booking slots for a date and session. This tool does not return prices.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -39,13 +39,17 @@ TOOL_DEFINITIONS = [
         "type": "function",
         "function": {
             "name": "book_appointment",
-            "description": "Reserve one available one-hour turf slot and return its order ID and exact charge.",
+            "description": "Quote the price for a requested turf slot first. Reserve it only after the player explicitly accepts the quote by setting confirm_price=true.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "name": {"type": "string"},
                     "date": {"type": "string", "description": "Date in YYYY-MM-DD format."},
                     "time": {"type": "string", "description": "Available slot start time in HH:MM 24-hour format; duration is one hour."},
+                    "confirm_price": {
+                        "type": "boolean",
+                        "description": "Set true only after the player explicitly agrees to the previously quoted charge. Omit or set false to quote without reserving.",
+                    },
                 },
                 "required": ["name", "date", "time"],
             },
@@ -83,7 +87,13 @@ class VoiceAssistant:
                     "names, and times. There is one field with one-hour slots. Morning session is 06:00-11:00; "
                     "evening session is 19:00-00:00. Do not offer afternoon availability. "
                     "Weekday morning slots cost 1500 rupees; weekday evening slots cost 2500 rupees. "
-                    "Weekend morning and evening slots cost 3000 rupees. Quote charges only from tool results. "
+                    "Weekend morning and evening slots cost 3000 rupees. If asked directly, answer rate questions "
+                    "from this schedule. Never include prices when merely listing available slots. If the player asks to book and "
+                    "has not already explicitly accepted the price, call book_appointment with confirm_price=false, "
+                    "state the quoted charge, and ask whether they agree. Do not reserve the slot yet. Only call "
+                    "book_appointment with confirm_price=true after an explicit yes to that quoted amount. "
+                    "A quote is not a reservation. "
+                    "Speak dates naturally, for example Sunday, October 4, 2026; do not read an ISO date digit by digit. "
                     "After a successful booking, give a compact receipt on separate lines with exactly: "
                     "Order ID, Name, Time, Charges. Then remind the player to arrive at the physical counter "
                     "10 minutes before the booking and pay there; if they do not pay, the slot may be assigned "
@@ -168,6 +178,7 @@ class VoiceAssistant:
             if assistant_tool_calls:
                 messages.append({"role": "assistant", "tool_calls": assistant_tool_calls})
                 confirmed_booking: dict[str, object] | None = None
+                pending_quote: dict[str, object] | None = None
                 for call in assistant_tool_calls:
                     name = call["function"]["name"]
                     try:
@@ -178,6 +189,8 @@ class VoiceAssistant:
                     await on_tool(name, result)
                     if name == "book_appointment" and result.get("success") is True:
                         confirmed_booking = result
+                    elif name == "book_appointment" and result.get("requires_price_confirmation") is True:
+                        pending_quote = result
                     messages.append(
                         {
                             "role": "tool",
@@ -208,6 +221,17 @@ class VoiceAssistant:
                             warning,
                         ]
                     )
+                    history[:] = messages[1:]
+                    return visible_response
+                if pending_quote is not None:
+                    quote_message = (
+                        f"Your {pending_quote['session']} turf quote for {pending_quote['name']} is "
+                        f"{pending_quote['date']} from {pending_quote['time']} to {pending_quote['end_time']} "
+                        f"for ₹{int(pending_quote['charges_inr']):,}. This slot is not reserved yet. "
+                        "Would you like me to confirm this booking?"
+                    )
+                    await on_sentence(quote_message)
+                    visible_response = quote_message
                     history[:] = messages[1:]
                     return visible_response
                 continue

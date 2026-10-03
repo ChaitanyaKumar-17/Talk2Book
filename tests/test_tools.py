@@ -13,7 +13,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 from fastapi.testclient import TestClient
 
-from backend.llm import VoiceAssistant
+from backend.llm import TOOL_DEFINITIONS, VoiceAssistant
 from backend import main
 from backend.mock_calendar import CalendarStore
 from backend.stt import DeepgramStream
@@ -38,20 +38,27 @@ class CalendarToolTests(unittest.TestCase):
         self.assertEqual([slot["start"] for slot in morning["available_slots"]], [
             "06:00", "07:00", "08:00", "09:00", "10:00",
         ])
-        self.assertTrue(all(slot["charges_inr"] == 1500 for slot in morning["available_slots"]))
+        self.assertTrue(all("charges_inr" not in slot for slot in morning["available_slots"]))
         self.assertEqual([slot["start"] for slot in evening["available_slots"]], [
             "19:00", "20:00", "21:00", "22:00", "23:00",
         ])
-        self.assertTrue(all(slot["charges_inr"] == 2500 for slot in evening["available_slots"]))
+        self.assertTrue(all("charges_inr" not in slot for slot in evening["available_slots"]))
 
     def test_weekend_morning_and_evening_slots_cost_three_thousand(self) -> None:
         saturday = "2026-10-03"
         morning = check_availability(self.calendar, saturday, "morning")
         evening = check_availability(self.calendar, saturday, "evening")
 
-        self.assertTrue(all(slot["charges_inr"] == 3000 for slot in morning["available_slots"]))
-        self.assertTrue(all(slot["charges_inr"] == 3000 for slot in evening["available_slots"]))
-        booking = book_appointment(self.calendar, "Weekend player", saturday, "19:00")
+        self.assertTrue(all("charges_inr" not in slot for slot in morning["available_slots"]))
+        self.assertTrue(all("charges_inr" not in slot for slot in evening["available_slots"]))
+        morning_quote = book_appointment(self.calendar, "Weekend player", saturday, "07:00")
+        evening_quote = book_appointment(self.calendar, "Weekend player", saturday, "19:00")
+        self.assertEqual(morning_quote["charges_inr"], 3000)
+        self.assertEqual(evening_quote["charges_inr"], 3000)
+        self.assertTrue(morning_quote["requires_price_confirmation"])
+        self.assertEqual(self.calendar.list_appointments(), [])
+
+        booking = book_appointment(self.calendar, "Weekend player", saturday, "19:00", confirm_price=True)
         self.assertEqual(booking["charges_inr"], 3000)
         self.assertEqual(booking["time"], "19:00")
         self.assertEqual(booking["end_time"], "20:00")
@@ -65,7 +72,19 @@ class CalendarToolTests(unittest.TestCase):
         self.assertFalse(any(slot["start"].startswith(("11:", "12:", "13:", "14:", "15:", "16:", "17:", "18:")) for slot in result["available_slots"]))
 
     def test_booking_removes_slot_from_availability(self) -> None:
-        booking = book_appointment(self.calendar, "Ada Lovelace", self.appointment_date, "07:00")
+        quote = book_appointment(self.calendar, "Ada Lovelace", self.appointment_date, "07:00")
+
+        self.assertFalse(quote["success"])
+        self.assertTrue(quote["requires_price_confirmation"])
+        self.assertEqual(quote["charges_inr"], 3000 if date.fromisoformat(self.appointment_date).weekday() >= 5 else 1500)
+        self.assertEqual(self.calendar.list_appointments(), [])
+        booking = book_appointment(
+            self.calendar,
+            "Ada Lovelace",
+            self.appointment_date,
+            "07:00",
+            confirm_price=True,
+        )
 
         self.assertTrue(booking["success"])
         self.assertEqual(booking["end_time"], "08:00")
@@ -78,8 +97,8 @@ class CalendarToolTests(unittest.TestCase):
         self.assertNotIn("07:00", [slot["start"] for slot in result["available_slots"]])
 
     def test_double_booking_returns_conflict_without_overwriting_first_booking(self) -> None:
-        first = book_appointment(self.calendar, "Ada Lovelace", self.appointment_date, "20:00")
-        second = book_appointment(self.calendar, "Grace Hopper", self.appointment_date, "20:00")
+        first = book_appointment(self.calendar, "Ada Lovelace", self.appointment_date, "20:00", confirm_price=True)
+        second = book_appointment(self.calendar, "Grace Hopper", self.appointment_date, "20:00", confirm_price=True)
 
         self.assertTrue(first["success"])
         self.assertFalse(second["success"])
@@ -98,7 +117,7 @@ class SpeechTextTests(unittest.TestCase):
     def test_formats_dates_times_and_removes_nonspoken_markup(self) -> None:
         result = prepare_speech_text("**Available** on 2026-09-30 at 13:30 for ₹1,500. Visit https://example.com #4")
 
-        self.assertEqual(result, "Available on September 30, 2026 at 1:30 PM for 1,500 rupees. Visit 4")
+        self.assertEqual(result, "Available on Wednesday, September 30, 2026 at 1:30 PM for 1,500 rupees. Visit 4")
 
     def test_edge_synthesizer_sends_clean_text_and_returns_audio(self) -> None:
         calls = []
@@ -118,7 +137,7 @@ class SpeechTextTests(unittest.TestCase):
         self.assertEqual(audio, b"mp3-audio")
         self.assertEqual(
             calls,
-            [("Available on September 30, 2026 at 1:30 PM. Four slots.", "en-US-AriaNeural", "+8%")],
+            [("Available on Wednesday, September 30, 2026 at 1:30 PM. Four slots.", "en-US-AriaNeural", "+8%")],
         )
 
 
@@ -171,6 +190,7 @@ class StreamingResponseTests(unittest.IsolatedAsyncioTestCase):
             "date": "2026-10-05",
             "time": "06:00",
             "end_time": "07:00",
+            "session": "morning",
             "charges_inr": 1500,
             "payment_instructions": "Please arrive at the physical counter 10 minutes before your booking time and pay there. If payment is not completed, this turf slot may be assigned to someone else.",
         }
@@ -240,6 +260,84 @@ class StreamingResponseTests(unittest.IsolatedAsyncioTestCase):
             "charges_inr": 1500,
         }])
         self.assertEqual(completions.calls, 1)
+
+    async def test_booking_request_quotes_first_without_speaking_a_receipt(self) -> None:
+        quote = {
+            "success": False,
+            "requires_price_confirmation": True,
+            "error": "This one-hour turf slot costs ₹1,500. Confirm before I reserve it.",
+            "name": "Asha Patel",
+            "date": "2026-10-05",
+            "time": "06:00",
+            "end_time": "07:00",
+            "session": "morning",
+            "charges_inr": 1500,
+        }
+        tool_call = SimpleNamespace(
+            index=0,
+            id="call-quote",
+            function=SimpleNamespace(
+                name="book_appointment",
+                arguments='{"name":"Asha Patel","date":"2026-10-05","time":"06:00","confirm_price":false}',
+            ),
+        )
+
+        def chunk(content=None, tool_calls=None):
+            return SimpleNamespace(
+                choices=[SimpleNamespace(delta=SimpleNamespace(content=content, tool_calls=tool_calls))]
+            )
+
+        class FakeStream:
+            def __init__(self, chunks):
+                self.chunks = chunks
+
+            async def __aiter__(self):
+                for item in self.chunks:
+                    yield item
+
+        class FakeCompletions:
+            calls = 0
+
+            async def create(self, **kwargs):
+                self.calls += 1
+                return FakeStream([chunk(tool_calls=[tool_call])])
+
+        completions = FakeCompletions()
+        assistant = object.__new__(VoiceAssistant)
+        assistant.client = SimpleNamespace(chat=SimpleNamespace(completions=completions))
+        assistant.model = "test-model"
+        spoken = []
+        summaries = []
+
+        async def record_sentence(sentence):
+            spoken.append(sentence)
+
+        async def ignore_tool(name, result):
+            return None
+
+        async def record_summary(summary):
+            summaries.append(summary)
+
+        with patch.object(assistant, "_run_tool", return_value=quote) as run_tool:
+            response = await assistant.respond(
+                [{"role": "user", "content": "Book tomorrow morning for Asha Patel."}],
+                record_sentence,
+                ignore_tool,
+                lambda: None,
+                record_summary,
+            )
+
+        self.assertFalse(run_tool.call_args.args[1]["confirm_price"])
+        self.assertIn("₹1,500", response)
+        self.assertIn("This slot is not reserved yet.", response)
+        self.assertIn("Would you like me to confirm this booking?", response)
+        self.assertEqual(" ".join(spoken), response)
+        self.assertEqual(summaries, [])
+        self.assertEqual(completions.calls, 1)
+        booking_tool = next(
+            tool["function"] for tool in TOOL_DEFINITIONS if tool["function"]["name"] == "book_appointment"
+        )
+        self.assertNotIn("confirm_price", booking_tool["parameters"]["required"])
 
 
 class DeepgramAdapterTests(unittest.IsolatedAsyncioTestCase):

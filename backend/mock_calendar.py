@@ -126,19 +126,23 @@ class CalendarStore:
                 end_clock = (minute + self.SLOT_MINUTES) % (24 * 60)
                 end_time = f"{end_clock // 60:02d}:{end_clock % 60:02d}"
                 if start_time not in booked:
-                    start_clock = time.fromisoformat(start_time)
                     session = "morning" if start_minute < 11 * 60 else "evening"
                     slots.append(
                         {
                             "start": start_time,
                             "end": end_time,
                             "session": session,
-                            "charges_inr": self._price_for_slot(parsed_date, start_clock),
                         }
                     )
         return {"date": parsed_date.isoformat(), "time_range": time_range, "available_slots": slots}
 
-    def book_appointment(self, name: str, appointment_date: str, appointment_time: str) -> dict[str, object]:
+    def book_appointment(
+        self,
+        name: str,
+        appointment_date: str,
+        appointment_time: str,
+        confirm_price: bool = False,
+    ) -> dict[str, object]:
         clean_name = name.strip()
         if not clean_name:
             raise ValueError("player name cannot be empty")
@@ -152,6 +156,30 @@ class CalendarStore:
         try:
             with self._connect() as connection:
                 connection.execute("BEGIN IMMEDIATE")
+                existing = connection.execute(
+                    "SELECT 1 FROM appointments WHERE appointment_date = ? AND appointment_time = ?",
+                    (parsed_date, parsed_time),
+                ).fetchone()
+                if existing:
+                    return {
+                        "success": False,
+                        "error": "That turf slot has just been booked. Please choose another available time.",
+                        "date": parsed_date,
+                        "time": parsed_time,
+                    }
+                if not confirm_price:
+                    charge_text = f"₹{charges_inr:,}"
+                    return {
+                        "success": False,
+                        "requires_price_confirmation": True,
+                        "error": f"This one-hour turf slot costs {charge_text}. Confirm before I reserve it.",
+                        "name": clean_name,
+                        "date": parsed_date,
+                        "time": parsed_time,
+                        "end_time": end_time,
+                        "session": "morning" if parsed_time_value.hour < 11 else "evening",
+                        "charges_inr": charges_inr,
+                    }
                 cursor = connection.execute(
                     "INSERT INTO appointments (name, appointment_date, appointment_time) VALUES (?, ?, ?)",
                     (clean_name, parsed_date, parsed_time),

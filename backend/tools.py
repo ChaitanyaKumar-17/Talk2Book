@@ -14,5 +14,6 @@ def book_appointment(
     name: str,
     date: str,
     time: str,
+    confirm_price: bool = False,
 ) -> dict[str, object]:
-    return calendar.book_appointment(name, date, time)
+    return calendar.book_appointment(name, date, time, confirm_price=confirm_price)

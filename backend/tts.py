@@ -21,7 +21,7 @@ def prepare_speech_text(text: str) -> str:
             parsed = date.fromisoformat(match.group(0))
         except ValueError:
             return match.group(0)
-        return f"{parsed.strftime('%B')} {parsed.day}, {parsed.year}"
+        return f"{parsed.strftime('%A, %B')} {parsed.day}, {parsed.year}"
 
     def format_time(match: re.Match[str]) -> str:
         hour = int(match.group(1))

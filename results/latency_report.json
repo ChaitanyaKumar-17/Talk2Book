@@ -55,11 +55,123 @@
       "stt_to_llm_ms": 0.3,
       "llm_time_to_first_token_ms": 968.8,
       "tts_synthesis_seconds": 9.139
+    },
+    {
+      "turn_id": "e944605c-a4b2-46f6-9915-901fb30b51e0",
+      "time_to_first_audio_ms": 45936.7,
+      "stt_to_llm_ms": 0.2,
+      "llm_time_to_first_token_ms": 878.6,
+      "tts_synthesis_seconds": 44.267
+    },
+    {
+      "turn_id": "4192587e-ae6f-4053-afbf-d5ed49edc6fc",
+      "time_to_first_audio_ms": 11791.8,
+      "stt_to_llm_ms": 0.3,
+      "llm_time_to_first_token_ms": 726.2,
+      "tts_synthesis_seconds": 10.648
+    },
+    {
+      "turn_id": "76379125-81cb-4043-bb16-067ca073a748",
+      "time_to_first_audio_ms": 4228.1,
+      "stt_to_llm_ms": 0.3,
+      "llm_time_to_first_token_ms": 928.9,
+      "tts_synthesis_seconds": 2.823
+    },
+    {
+      "turn_id": "0031bb48-fc54-4b4f-bbe8-80e7fe0b41ee",
+      "time_to_first_audio_ms": 2736.6,
+      "stt_to_llm_ms": 0.4,
+      "llm_time_to_first_token_ms": 690.5,
+      "tts_synthesis_seconds": 1.489
+    },
+    {
+      "turn_id": "1a70c3df-d2ec-44fc-92b8-445cd43b19ac",
+      "time_to_first_audio_ms": 4318.1,
+      "stt_to_llm_ms": 0.2,
+      "llm_time_to_first_token_ms": 1971.0,
+      "tts_synthesis_seconds": 1.737
+    },
+    {
+      "turn_id": "3b820acb-a2b8-4982-8657-26eb5b4a6595",
+      "time_to_first_audio_ms": 2514.2,
+      "stt_to_llm_ms": 0.3,
+      "llm_time_to_first_token_ms": 740.2,
+      "tts_synthesis_seconds": 4.678
+    },
+    {
+      "turn_id": "849b69fa-54d0-4e91-81c3-55b4ddbe1637",
+      "time_to_first_audio_ms": 2332.9,
+      "stt_to_llm_ms": 0.3,
+      "llm_time_to_first_token_ms": 637.6,
+      "tts_synthesis_seconds": 3.28
+    },
+    {
+      "turn_id": "356fcff9-c476-439d-a6c9-62f35b52e205",
+      "time_to_first_audio_ms": 4066.5,
+      "stt_to_llm_ms": 0.4,
+      "llm_time_to_first_token_ms": 1100.4,
+      "tts_synthesis_seconds": 5.737
+    },
+    {
+      "turn_id": "2d8012b1-f518-473d-8ad3-d8b4504febb1",
+      "time_to_first_audio_ms": 2951.0,
+      "stt_to_llm_ms": 0.3,
+      "llm_time_to_first_token_ms": 702.6,
+      "tts_synthesis_seconds": 1.663
+    },
+    {
+      "turn_id": "d418b119-2020-43e2-9f3d-517a78889e83",
+      "time_to_first_audio_ms": 2061.3,
+      "stt_to_llm_ms": 0.4,
+      "llm_time_to_first_token_ms": 949.7,
+      "tts_synthesis_seconds": 2.424
+    },
+    {
+      "turn_id": "101c4ebb-c0e8-4d93-862d-b025c366492e",
+      "time_to_first_audio_ms": 2068.0,
+      "stt_to_llm_ms": 0.3,
+      "llm_time_to_first_token_ms": 668.3,
+      "tts_synthesis_seconds": 2.736
+    },
+    {
+      "turn_id": "5bce939a-0608-4f82-a6f0-b4b6bf8b14bb",
+      "time_to_first_audio_ms": 2398.3,
+      "stt_to_llm_ms": 0.3,
+      "llm_time_to_first_token_ms": 841.7,
+      "tts_synthesis_seconds": 3.319
+    },
+    {
+      "turn_id": "830078e1-1efa-4e8d-9c12-202f0abe0ddb",
+      "time_to_first_audio_ms": 2074.5,
+      "stt_to_llm_ms": 0.3,
+      "llm_time_to_first_token_ms": 744.3,
+      "tts_synthesis_seconds": 2.716
+    },
+    {
+      "turn_id": "50284248-dc9a-42a7-a7d0-2469382ee0cc",
+      "time_to_first_audio_ms": 7776.6,
+      "stt_to_llm_ms": 0.3,
+      "llm_time_to_first_token_ms": 1337.9,
+      "tts_synthesis_seconds": 5.45
+    },
+    {
+      "turn_id": "8ae9315b-2869-4936-b6a0-d8be9f968c9c",
+      "time_to_first_audio_ms": 3290.7,
+      "stt_to_llm_ms": 0.3,
+      "llm_time_to_first_token_ms": 646.5,
+      "tts_synthesis_seconds": 1.942
+    },
+    {
+      "turn_id": "ba9fe2f9-23a2-4421-a8d0-24b970361e22",
+      "time_to_first_audio_ms": 2070.4,
+      "stt_to_llm_ms": 0.4,
+      "llm_time_to_first_token_ms": 766.6,
+      "tts_synthesis_seconds": 6.491
     }
   ],
   "summary": {
-    "completed_turns": 5,
-    "median_time_to_first_audio_ms": 13124.3,
+    "completed_turns": 21,
+    "median_time_to_first_audio_ms": 3290.7,
     "p95_time_to_first_audio_ms": 35837.1
   }
 }

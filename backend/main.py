@@ -19,7 +19,7 @@ from backend.latency import LatencyRecorder
 from backend.llm import VoiceAssistant
 from backend.mock_calendar import CalendarStore
 from backend.stt import DeepgramStream
-from backend.tts import KokoroSynthesizer
+from backend.tts import EdgeTtsSynthesizer
 
 ROOT = Path(__file__).resolve().parent.parent
 logger = logging.getLogger(__name__)
@@ -28,7 +28,10 @@ load_dotenv(ROOT / ".env")
 app = FastAPI(title="Talk2Book Voice Receptionist", version="1.0.0")
 calendar = CalendarStore(os.getenv("CALENDAR_DB_PATH", str(ROOT / "data" / "calendar.sqlite3")))
 latency = LatencyRecorder(ROOT / "results" / "latency_report.json")
-synthesizer = KokoroSynthesizer(os.getenv("KOKORO_VOICE", "af_heart"))
+synthesizer = EdgeTtsSynthesizer(
+    voice_name=os.getenv("EDGE_TTS_VOICE", "en-US-AriaNeural"),
+    rate=os.getenv("EDGE_TTS_RATE", "+8%"),
+)
 
 
 @app.get("/health")
@@ -88,17 +91,17 @@ async def voice_socket(websocket: WebSocket) -> None:
         async def speak(sentence: str) -> None:
             nonlocal first_audio_at, tts_seconds
             synthesis_started = time.perf_counter()
-            wav_bytes = await asyncio.to_thread(synthesizer.synthesize, sentence)
+            audio_bytes = await asyncio.to_thread(synthesizer.synthesize, sentence)
             tts_seconds += time.perf_counter() - synthesis_started
-            if not wav_bytes:
+            if not audio_bytes:
                 return
             if first_audio_at is None:
                 first_audio_at = time.perf_counter()
             await send(
                 {
                     "type": "audio",
-                    "encoding": "wav",
-                    "audio": base64.b64encode(wav_bytes).decode("ascii"),
+                    "encoding": "audio/mpeg",
+                    "audio": base64.b64encode(audio_bytes).decode("ascii"),
                     "text": sentence,
                 }
             )

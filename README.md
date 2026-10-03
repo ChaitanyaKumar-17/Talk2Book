@@ -1,6 +1,6 @@
 # Talk2Book
 
-Real-time browser voice receptionist for checking appointment availability and booking a slot. Audio is streamed to Deepgram, responses stream from Groq, and Kokoro generates speech sentence-by-sentence. The mock calendar is SQLite-backed and rejects conflicting reservations atomically.
+Real-time browser voice receptionist for checking Northside Turf availability and reserving one-hour field slots. Audio is streamed to Deepgram, responses stream from Groq, and Microsoft Edge neural voices generate speech through the `edge-tts` community client. The SQLite turf calendar rejects conflicting reservations atomically.
 
 ## Architecture
 
@@ -11,8 +11,8 @@ flowchart LR
 	STT -->|final utterance| LLM[Groq streaming LLM]
 	LLM -->|function calls| Tools[Availability + booking tools]
 	Tools --> DB[(SQLite mock calendar)]
-	LLM -->|complete sentence chunks| TTS[Kokoro local TTS]
-	TTS -->|WAV chunks| API
+	LLM -->|complete sentence chunks| TTS[Edge neural speech service]
+	TTS -->|MP3 audio chunks| API
 	API -->|WebSocket| Browser[Browser audio queue]
 	Browser -. speech energy / barge-in .-> API
 	API --> Metrics[Latency report JSON]
@@ -22,7 +22,7 @@ The first LLM response streams text and accumulates any function calls; tool res
 
 ## Run locally
 
-Requirements: Python 3.12, a working microphone, and Groq and Deepgram API keys. Kokoro downloads model assets on first synthesis and runs locally on CPU; first-turn setup and synthesis can take longer than subsequent turns. `DEEPGRAM_ENDPOINTING_MS` controls how long silence is allowed before a turn is finalized (default 1200 ms; supported range 1000-5000 ms).
+Requirements: Python 3.12, a working microphone, Groq and Deepgram API keys, and an internet connection. Edge TTS needs no speech API key or payment card; it uses Microsoft's online Edge speech service through an unofficial community client, so service availability and limits may change. The `edge-tts` package is GPL-3.0; check license compatibility before redistributing the project. `DEEPGRAM_ENDPOINTING_MS` controls how long silence is allowed before a turn is finalized (default 1200 ms; supported range 1000-5000 ms).
 
 ```powershell
 py -3.12 -m venv .venv
@@ -31,15 +31,15 @@ python -m pip install -r requirements.txt
 Copy-Item .env.example .env
 ```
 
-Add `GROQ_API_KEY` and `DEEPGRAM_API_KEY` to `.env`, then start the app:
+Add `GROQ_API_KEY` and `DEEPGRAM_API_KEY` to `.env`. The default speech voice is `en-US-AriaNeural`; set `EDGE_TTS_VOICE` and `EDGE_TTS_RATE` to choose another voice or speaking rate. Then start the app:
 
 ```powershell
 uvicorn backend.main:app --reload --reload-dir backend --reload-dir frontend
 ```
 
-Open <http://127.0.0.1:8000>. Microphone access requires localhost or HTTPS. Press the microphone button to start, speak, then either pause for the configured silence interval or press the mic button again to finish the phrase. When the transcript is marked ready, press Send. The browser needs to allow microphone access. Keep headphones on or use echo cancellation to avoid the speaker audio triggering barge-in.
+Open <http://127.0.0.1:8000>. Microphone access requires localhost or HTTPS. Press the microphone button to start, ask for a turf slot, then either pause for the configured silence interval or press the mic button again to finish the phrase. When the transcript is marked ready, press Send. The assistant checks one-hour slots and can reserve an available start time. Keep headphones on or use echo cancellation to avoid speaker audio triggering barge-in.
 
-To run the offline calendar tests without installing model/provider packages:
+Run the deterministic booking, streaming, and speech-text tests:
 
 ```powershell
 python -m unittest discover -s tests -v
@@ -47,18 +47,18 @@ python -m unittest discover -s tests -v
 
 ## Calendar behavior
 
-Slots are available every 30 minutes from 09:00 through 16:30. `check_availability` accepts `morning`, `afternoon`, `evening`, `any`, or an explicit `HH:MM-HH:MM` window. The SQLite unique constraint on date/time prevents double booking even when two requests race. The local database defaults to `data/calendar.sqlite3`; set `CALENDAR_DB_PATH` to change it.
+Northside Turf offers one-hour bookings in two sessions: morning from 06:00 through 11:00, with starts at 06:00, 07:00, 08:00, 09:00, and 10:00; and evening from 19:00 through midnight, with starts at 19:00, 20:00, 21:00, 22:00, and 23:00. Weekday morning slots cost ₹1,500, weekday evening slots ₹2,500, and both weekend sessions ₹3,000. `check_availability` accepts `morning`, `evening`, or `any`. There is no midday session. Successful bookings return an order ID and a structured name/time/charges summary. Players must arrive at the physical counter 10 minutes early and pay there; unpaid slots may be assigned to another player. The mock does not process or track payments. The SQLite unique constraint on date/time prevents double booking even when two requests race. The local database defaults to `data/calendar.sqlite3`; set `CALENDAR_DB_PATH` to change it.
 
 ## Latency measurements
 
-Each processed turn appends time-to-first-response-audio and stage timings to [`results/latency_report.json`](results/latency_report.json). The repository starts with no measured turns: populate this report by running real conversations before claiming median or p95 performance. Measurements require working provider keys and a successful Kokoro model load. The p95 summary is the nearest-rank 95th percentile.
+Each processed turn appends time-to-first-response-audio and stage timings to [`results/latency_report.json`](results/latency_report.json). It currently contains 12 historical turns across earlier TTS versions, not a turf-specific Edge TTS baseline. Preserve these entries and compare new turf turns separately. The p95 summary is the nearest-rank 95th percentile.
 
 | Measurement | Current result |
 | --- | --- |
-| Completed voice turns | 0 (not yet measured) |
-| Median time to first audio | Not measured |
-| p95 time to first audio | Not measured |
-| Largest latency contributor | Requires real measurements |
+| Completed voice turns | 12 historical, mixed TTS |
+| Median time to first audio | 6.1 s (mixed historical data) |
+| p95 time to first audio | 45.9 s (mixed historical data) |
+| Largest latency contributor | Earlier Kokoro turns; measure turf/Edge separately |
 
 ## Deployment
 
@@ -66,8 +66,8 @@ Each processed turn appends time-to-first-response-audio and stage timings to [`
 
 ## Known limitations
 
-- English (`en-US`) transcription and the `af_heart` Kokoro voice are configured by default; accents and noisy rooms need testing.
+- English (`en-US`) transcription and the `en-US-AriaNeural` Edge voice are configured by default; accents and noisy rooms need testing.
 - The browser uses client-side RMS energy for barge-in. Loud background sound or speaker echo can interrupt the agent; headphones and browser echo cancellation help.
-- Kokoro is self-hosted, but its first-run model download and CPU synthesis can dominate response latency. It is sentence-incremental rather than waveform-token streaming.
-- Calendar hours, slot duration, locale, and timezone are fixed for this mock. Dates are interpreted using the server's current date; no real clinic or business system is connected.
+- Edge TTS requires network access and relies on an unofficial client. Spoken text is normalized for common dates, times, and markup before synthesis.
+- Turf sessions, prices, one-hour duration, locale, and timezone are fixed for this mock. Dates are interpreted using the server's current date; no real venue or payment system is connected.
 - There are no real latency results or recorded demo clip checked in yet. Run at least 15 turns and capture a real interruption before using the resume claim in the project brief.

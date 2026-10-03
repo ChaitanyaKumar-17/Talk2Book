@@ -4,31 +4,33 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f4f2eb">
-  <title>Talk2Book | Reception</title>
+  <title>TurfBook | Northside Turf</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      color-scheme: light;
-      --paper: #f4f2eb;
-      --ink: #202722;
-      --muted: #747a70;
-      --line: #d9dbd0;
-      --green: #245c46;
-      --lime: #c6e078;
-      --coral: #df765d;
-      --white: #fffefa;
+      color-scheme: dark;
+      --paper: #07120e;
+      --ink: #edf6ef;
+      --muted: #94a89c;
+      --line: #263b30;
+      --green: #a9ef63;
+      --lime: #d7ff72;
+      --coral: #ff805f;
+      --white: #101e17;
+      --surface-raised: #17271f;
+      --field: #183a29;
       font-family: "Manrope", sans-serif;
       font-synthesis: none;
     }
     * { box-sizing: border-box; }
-    body { margin: 0; min-width: 320px; min-height: 100vh; background: var(--paper); color: var(--ink); }
+    body { margin: 0; min-width: 320px; min-height: 100vh; background-color: var(--paper); background-image: repeating-linear-gradient(115deg, transparent 0 46px, #ffffff03 47px 48px); color: var(--ink); }
     button { font: inherit; }
     .shell { max-width: 1180px; min-height: 100vh; margin: 0 auto; padding: 0 36px 32px; display: flex; flex-direction: column; }
     header { min-height: 84px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); }
     .brand { display: flex; align-items: center; gap: 12px; font-size: 15px; font-weight: 800; letter-spacing: 0; }
-    .brand-mark { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: var(--green); color: var(--lime); }
+    .brand-mark { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 9px; background: var(--green); color: #0a160f; }
     .brand-mark svg { width: 19px; height: 19px; }
     .header-meta, .eyebrow, .mono { font-family: "DM Mono", monospace; }
     .header-meta { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0; }
@@ -37,38 +39,56 @@
     .eyebrow { color: var(--green); font-size: 11px; text-transform: uppercase; }
     h1 { max-width: 600px; margin: 12px 0 10px; font-size: clamp(32px, 4.2vw, 53px); line-height: 1.04; letter-spacing: 0; }
     .subhead { margin: 0; color: var(--muted); font-size: 14px; }
-    .session { margin-top: 34px; flex: 1; display: flex; flex-direction: column; background: var(--white); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+    .session { margin-top: 34px; flex: 1; display: flex; flex-direction: column; background: #0d1913; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; box-shadow: 0 22px 70px #00000035; }
     .session-top { height: 48px; padding: 0 18px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); }
     .session-label { color: var(--muted); font: 11px "DM Mono", monospace; text-transform: uppercase; }
     .status { display: flex; align-items: center; gap: 8px; color: var(--muted); font: 11px "DM Mono", monospace; text-transform: uppercase; }
-    .status-dot { width: 7px; height: 7px; background: #a6aa9f; border-radius: 50%; }
-    .status[data-state="listening"] .status-dot { background: #53a86f; box-shadow: 0 0 0 3px #53a86f22; }
+    .status-dot { width: 7px; height: 7px; background: #617267; border-radius: 50%; }
+    .status[data-state="listening"] .status-dot { background: var(--green); box-shadow: 0 0 0 3px #a9ef6322; }
     .status[data-state="ready_to_send"] .status-dot { background: var(--coral); }
       .status[data-state="finalizing"] .status-dot { background: var(--coral); }
     .status[data-state="thinking"] .status-dot, .status[data-state="speaking"] .status-dot { background: var(--coral); }
     .transcript { flex: 1; min-height: 260px; max-height: 410px; overflow: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
-    .empty { margin: auto; color: #989c91; font-size: 13px; text-align: center; }
+    .empty { margin: auto; color: #829489; font-size: 13px; text-align: center; }
     .line { max-width: 84%; font-size: 13px; line-height: 1.6; animation: arrive .22s ease-out both; }
-    .line.user { align-self: flex-end; padding: 10px 13px; color: var(--white); background: var(--green); border-radius: 8px 8px 2px 8px; }
-    .line.agent { align-self: flex-start; padding: 10px 13px; background: #eeeee7; border-radius: 8px 8px 8px 2px; }
+    .line.user { align-self: flex-end; padding: 10px 13px; color: #0b160f; background: var(--green); border-radius: 8px 8px 2px 8px; }
+    .line.agent { align-self: flex-start; padding: 10px 13px; color: var(--ink); background: #1b2c23; border-radius: 8px 8px 8px 2px; }
     .line.partial { opacity: .55; }
+    .typing-indicator { min-width: 54px; min-height: 36px; display: flex; align-items: center; justify-content: center; gap: 4px; }
+    .typing-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: typing-bounce 1.05s infinite ease-in-out; }
+    .typing-dot:nth-child(2) { animation-delay: .14s; }
+    .typing-dot:nth-child(3) { animation-delay: .28s; }
+    @keyframes typing-bounce { 0%, 60%, 100% { opacity: .45; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-4px); } }
     @keyframes arrive { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
     .controls { min-height: 154px; padding: 20px; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 22px; border-top: 1px solid var(--line); }
     .button-group { display: flex; align-items: center; gap: 10px; }
     .visualizer-wrap { min-width: 0; }
     .visualizer { display: block; width: 100%; height: 60px; }
     .hint { margin-top: 7px; color: var(--muted); font-size: 11px; }
-    .mic-button { width: 68px; height: 68px; display: grid; place-items: center; border: 0; border-radius: 50%; color: var(--white); background: var(--green); cursor: pointer; transition: transform .18s ease, background .18s ease; }
+    .mic-button { width: 68px; height: 68px; display: grid; place-items: center; border: 0; border-radius: 50%; color: #0b160f; background: var(--green); cursor: pointer; transition: transform .18s ease, background .18s ease; }
     .mic-button:hover { transform: scale(1.04); }
-    .mic-button[aria-pressed="true"] { color: var(--ink); background: var(--lime); }
+    .mic-button[aria-pressed="true"] { color: #0b160f; background: var(--lime); }
     .mic-button:disabled { cursor: wait; opacity: .6; }
     .mic-button svg { width: 25px; height: 25px; }
-    .send-button { width: 46px; height: 46px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%; color: var(--green); background: #eeeee7; cursor: pointer; }
+    .send-button { width: 46px; height: 46px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%; color: var(--green); background: var(--surface-raised); cursor: pointer; }
     .send-button:hover:not(:disabled) { background: var(--lime); }
     .send-button:disabled { cursor: default; opacity: .4; }
     .send-button svg { width: 19px; height: 19px; }
     .side { padding-top: 7px; }
     .side h2 { margin: 10px 0 20px; font-size: 19px; letter-spacing: 0; }
+    .field-diagram { position: relative; aspect-ratio: 1.8; margin: 17px 0 23px; overflow: hidden; border: 1px solid #9fee653b; border-radius: 7px; background: repeating-linear-gradient(90deg, #24563a 0 22px, #1e4a33 22px 44px); }
+    .field-diagram::before { position: absolute; inset: 10px; border: 1px solid #d9ffac80; border-radius: 4px; content: ""; }
+    .field-diagram::after { position: absolute; top: 10px; bottom: 10px; left: 50%; width: 1px; background: #d9ffac80; content: ""; }
+    .field-center { position: absolute; top: 50%; left: 50%; width: 52px; aspect-ratio: 1; border: 1px solid #d9ffac80; border-radius: 50%; transform: translate(-50%, -50%); }
+    .field-box { position: absolute; top: 29%; bottom: 29%; width: 15%; border: 1px solid #d9ffac80; }
+    .field-box.left { left: 10px; border-left: 0; }
+    .field-box.right { right: 10px; border-right: 0; }
+    .hours-label { margin: 24px 0 10px; color: var(--muted); font: 10px "DM Mono", monospace; text-transform: uppercase; }
+    .session-row { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); }
+    .session-name { font-size: 13px; font-weight: 700; }
+    .session-times { color: var(--green); font: 12px "DM Mono", monospace; white-space: nowrap; }
+    .session-slots { margin-top: 4px; color: var(--muted); font-size: 11px; }
+    .session-price { margin-top: 5px; color: var(--lime); font: 10px "DM Mono", monospace; }
     .tool-list { border-top: 1px solid var(--line); }
     .tool-row { padding: 15px 0; display: grid; grid-template-columns: 30px 1fr; gap: 11px; border-bottom: 1px solid var(--line); }
     .tool-number { color: var(--coral); font: 11px "DM Mono", monospace; }
@@ -77,9 +97,9 @@
     .activity { margin-top: 32px; }
     .activity h3 { margin: 0 0 12px; color: var(--muted); font: 11px "DM Mono", monospace; font-weight: 400; text-transform: uppercase; }
     .activity-list { display: flex; flex-direction: column; gap: 8px; }
-    .activity-item { padding: 11px 12px; border-left: 2px solid var(--lime); background: #ebece3; font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
+    .activity-item { padding: 11px 12px; border-left: 2px solid var(--lime); background: var(--surface-raised); font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
     .activity-item strong { font-family: "DM Mono", monospace; font-weight: 500; }
-    .notice { margin-top: 25px; padding: 13px; color: #5f655c; background: #e9e8df; border-radius: 6px; font-size: 11px; line-height: 1.55; }
+    .notice { margin-top: 25px; padding: 13px; color: var(--muted); background: var(--surface-raised); border: 1px solid var(--line); border-radius: 6px; font-size: 11px; line-height: 1.55; }
     footer { padding-top: 16px; display: flex; justify-content: space-between; gap: 16px; color: var(--muted); border-top: 1px solid var(--line); font: 10px "DM Mono", monospace; text-transform: uppercase; }
     @media (max-width: 760px) {
       .shell { padding: 0 18px 22px; }
@@ -97,17 +117,17 @@
 <body>
   <div class="shell">
     <header>
-      <div class="brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12a8 8 0 0 1 16 0v4a3 3 0 0 1-3 3h-2v-6h5M4 13h5v6H7a3 3 0 0 1-3-3z"/><path d="M12 3v3m-3-2 1 2m5-2-1 2"/></svg></span>Talk2Book</div>
-      <div class="header-meta">Voice receptionist <span aria-hidden="true">/</span> Live session</div>
+      <div class="brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12a8 8 0 0 1 16 0v4a3 3 0 0 1-3 3h-2v-6h5M4 13h5v6H7a3 3 0 0 1-3-3z"/><path d="M12 3v3m-3-2 1 2m5-2-1 2"/></svg></span>TurfBook</div>
+      <div class="header-meta">Northside Turf <span aria-hidden="true">/</span> Reservations open</div>
     </header>
     <main>
       <section class="desk" aria-labelledby="title">
-        <div class="eyebrow">Appointment desk / 01</div>
-        <h1 id="title">Good morning.<br>How can we help?</h1>
-        <p class="subhead">Talk naturally to check availability or reserve a visit.</p>
+        <div class="eyebrow">Northside Turf / Field 01</div>
+        <h1 id="title">Your next game<br>starts here.</h1>
+        <p class="subhead">One-hour turf bookings. Ask about a date, find a slot, and lock it in.</p>
         <div class="session">
           <div class="session-top">
-            <span class="session-label">Conversation</span>
+            <span class="session-label">Turf booking assistant</span>
             <span class="status" id="status" data-state="idle"><span class="status-dot"></span><span id="status-text">Ready</span></span>
           </div>
           <div class="transcript" id="transcript" aria-live="polite" aria-label="Conversation transcript">
@@ -129,21 +149,36 @@
           </div>
         </div>
       </section>
-      <aside class="side" aria-label="Reception tools">
-        <div class="eyebrow">Available actions</div>
-        <h2>Calendar tools</h2>
+      <aside class="side" aria-label="Turf venue and booking hours">
+        <div class="eyebrow">Your venue / Field 01</div>
+        <h2>Northside Turf</h2>
+        <div class="field-diagram" role="img" aria-label="Top-down diagram of the turf field">
+          <span class="field-box left"></span>
+          <span class="field-box right"></span>
+          <span class="field-center"></span>
+        </div>
+        <div class="hours-label">Daily booking sessions / 60-minute slots</div>
+        <div class="session-row">
+          <div><div class="session-name">Morning</div><div class="session-slots">5 one-hour starts</div><div class="session-price">WEEKDAYS ₹1,500 / WEEKENDS ₹3,000</div></div>
+          <div class="session-times">06:00 - 11:00</div>
+        </div>
+        <div class="session-row">
+          <div><div class="session-name">Evening</div><div class="session-slots">5 one-hour starts</div><div class="session-price">WEEKDAYS ₹2,500 / WEEKENDS ₹3,000</div></div>
+          <div class="session-times">19:00 - 00:00</div>
+        </div>
+        <div class="hours-label">Assistant can</div>
         <div class="tool-list">
-          <div class="tool-row"><div class="tool-number">01</div><div><div class="tool-name">Check availability</div><div class="tool-desc">Find open half-hour slots by date and time of day.</div></div></div>
-          <div class="tool-row"><div class="tool-number">02</div><div><div class="tool-name">Book an appointment</div><div class="tool-desc">Reserve a slot and return a confirmation, or flag a conflict.</div></div></div>
+          <div class="tool-row"><div class="tool-number">01</div><div><div class="tool-name">Find open times</div><div class="tool-desc">Check morning, evening, or both sessions for your date.</div></div></div>
+          <div class="tool-row"><div class="tool-number">02</div><div><div class="tool-name">Reserve your hour</div><div class="tool-desc">Confirm your name and start time. A slot is held for one hour.</div></div></div>
         </div>
         <section class="activity" aria-live="polite">
-          <h3>Tool activity</h3>
+          <h3>Booking activity</h3>
           <div class="activity-list" id="activity"><div class="activity-item">Calendar activity will be logged here.</div></div>
         </section>
-        <div class="notice">This demo uses a local mock calendar. Avoid sharing sensitive personal or medical information.</div>
+        <div class="notice">Arrive at the physical counter 10 minutes before your booking and pay there. Unpaid slots may be assigned to another player. Demo venue: reservations are stored locally.</div>
       </aside>
     </main>
-    <footer><span>Streaming STT / LLM / TTS</span><span>Enable the mic for each new query</span></footer>
+    <footer><span>One-hour sessions / Morning + evening</span><span>Enable the mic for each new query</span></footer>
   </div>
   <script>
     const micButton = document.querySelector("#mic");
@@ -176,14 +211,32 @@
     let awaitingReply = false;
     let assistantTurnFinished = false;
     let pendingAudio = 0;
+    let typingIndicator;
     let animationFrame;
     const activeSources = new Set();
 
     function setStatus(value) {
-      const names = { idle: "Ready", connecting: "Connecting", listening: "Listening", finalizing: "Finalizing", ready_to_send: "Ready to send", thinking: "Thinking", speaking: "Speaking", microphone_off: "Microphone off", error: "Connection issue" };
+      const names = { idle: "Ready", connecting: "Connecting", listening: "Listening", finalizing: "Finalizing", ready_to_send: "Ready to send", thinking: "Microphone off", speaking: "Speaking", microphone_off: "Microphone off", error: "Connection issue" };
       statusEl.dataset.state = value;
       statusText.textContent = names[value] || value;
-      hintEl.textContent = value === "listening" ? "Speak, pause, or press the mic button to finish the phrase" : value === "finalizing" ? "Finishing your transcript…" : value === "ready_to_send" ? "Transcript ready. Press Send to get a response." : value === "thinking" ? "Preparing your response…" : value === "speaking" ? "Response playing; mic is off" : value === "microphone_off" ? "Click the mic to start your next query" : value === "connecting" ? "Opening secure audio connection…" : value === "error" ? "Check the message above and your connection" : "Microphone is off";
+      hintEl.textContent = value === "listening" ? "Speak, pause, or press the mic button to finish the phrase" : value === "finalizing" ? "Finishing your transcript…" : value === "ready_to_send" ? "Transcript ready. Press Send to get a response." : value === "thinking" ? "Your reply is being prepared" : value === "speaking" ? "Response playing; mic is off" : value === "microphone_off" ? "Click the mic to start your next query" : value === "connecting" ? "Opening secure audio connection…" : value === "error" ? "Check the message above and your connection" : "Microphone is off";
+    }
+
+    function showTypingIndicator() {
+      if (typingIndicator?.isConnected) return;
+      document.querySelector("#empty")?.remove();
+      typingIndicator = document.createElement("div");
+      typingIndicator.className = "line agent typing-indicator";
+      typingIndicator.setAttribute("role", "status");
+      typingIndicator.setAttribute("aria-label", "Assistant is typing");
+      typingIndicator.innerHTML = '<span class="typing-dot" aria-hidden="true"></span><span class="typing-dot" aria-hidden="true"></span><span class="typing-dot" aria-hidden="true"></span>';
+      transcriptEl.append(typingIndicator);
+      transcriptEl.scrollTop = transcriptEl.scrollHeight;
+    }
+
+    function hideTypingIndicator() {
+      typingIndicator?.remove();
+      typingIndicator = null;
     }
 
     function addLine(text, who, partial = false) {
@@ -204,10 +257,11 @@
       if (activityEl.children.length === 1 && activityEl.textContent.includes("will be logged")) activityEl.replaceChildren();
       const item = document.createElement("div");
       item.className = "activity-item";
-      const summary = result.success === false ? result.error : result.available_slots ? `${result.available_slots.length} open slots on ${result.date}` : `Confirmed ${result.date} at ${result.time}`;
+      const summary = result.success === false ? result.error : result.available_slots ? `${result.available_slots.length} open turf slots on ${result.date}` : `Order ID: ${result.order_id}\nName: ${result.name}\nTime: ${result.time} to ${result.end_time} on ${result.date}\nCharges: ₹${result.charges_inr.toLocaleString("en-IN")}`;
       const title = document.createElement("strong");
       title.textContent = name.replaceAll("_", " ");
       const detail = document.createElement("div");
+      detail.style.whiteSpace = "pre-line";
       detail.textContent = summary;
       item.append(title, detail);
       activityEl.prepend(item);
@@ -254,7 +308,7 @@
       for (let index = 0; index < bars; index++) {
         const wobble = .12 + Math.abs(Math.sin(index * .61 + performance.now() * .004)) * rms * 7;
         const height = Math.max(3 * scale, Math.min(canvas.height * .88, wobble * canvas.height));
-        canvasContext.fillStyle = rms > .018 ? "#245c46" : "#c4c8bb";
+        canvasContext.fillStyle = rms > .018 ? "#a9ef63" : "#34493d";
         canvasContext.fillRect(index * (width + gap), (canvas.height - height) / 2, width, height);
       }
       if (speaking && rms > .045) voiceFrames++;
@@ -343,6 +397,7 @@
           const message = JSON.parse(event.data);
           if (message.type === "config") silenceTimeoutMs = message.silence_timeout_ms || silenceTimeoutMs;
           else if (message.type === "status") {
+            if (message.value === "thinking") showTypingIndicator();
             if (message.value === "listening" && awaitingReply) {
               assistantTurnFinished = true;
               enableMicAfterReply();
@@ -379,6 +434,7 @@
             transcriptLine.textContent = currentTranscript;
             transcriptEl.scrollTop = transcriptEl.scrollHeight;
           } else if (message.type === "audio") {
+            hideTypingIndicator();
             addLine(message.text, "agent");
             pendingAudio++;
             try {
@@ -389,8 +445,8 @@
             }
           }
           else if (message.type === "tool_result") addActivity(message.name, message.result);
-          else if (message.type === "turn_complete") speaking = activeSources.size > 0;
-          else if (message.type === "error") { addLine(message.message, "agent"); stopSession(); setStatus("error"); }
+          else if (message.type === "turn_complete") { hideTypingIndicator(); speaking = activeSources.size > 0; }
+          else if (message.type === "error") { hideTypingIndicator(); addLine(message.message, "agent"); stopSession(); setStatus("error"); }
         };
         socket.onerror = () => { addLine("The voice service couldn't connect. Check your network and try again.", "agent"); stopSession(); setStatus("error"); };
         socket.onclose = () => { if (micButton.getAttribute("aria-pressed") === "true") stopSession(); };
@@ -449,6 +505,7 @@
       interimTranscript = "";
       transcriptLine = null;
       transcriptReady = false;
+      hideTypingIndicator();
       sendButton.disabled = true;
       micButton.disabled = false;
       micButton.setAttribute("aria-pressed", "false");
@@ -524,6 +581,7 @@
       micButton.classList.remove("active");
       sendButton.disabled = true;
       setStatus("thinking");
+      showTypingIndicator();
     }
 
     micButton.addEventListener("click", () => micButton.getAttribute("aria-pressed") === "true" ? finishCurrentPhrase() : armMicrophone());

@@ -20,14 +20,15 @@ TOOL_DEFINITIONS = [
         "type": "function",
         "function": {
             "name": "check_availability",
-            "description": "Check open appointment slots for a date and part of day.",
+            "description": "Check open one-hour turf booking slots and exact prices for a date and session.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "date": {"type": "string", "description": "Date in YYYY-MM-DD format."},
                     "time_range": {
                         "type": "string",
-                        "enum": ["morning", "afternoon", "evening", "any"],
+                        "enum": ["morning", "evening", "any"],
+                        "description": "Morning is 06:00-11:00; evening is 19:00-00:00; any returns both sessions.",
                     },
                 },
                 "required": ["date", "time_range"],
@@ -38,13 +39,13 @@ TOOL_DEFINITIONS = [
         "type": "function",
         "function": {
             "name": "book_appointment",
-            "description": "Reserve one available half-hour appointment slot.",
+            "description": "Reserve one available one-hour turf slot and return its order ID and exact charge.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "name": {"type": "string"},
                     "date": {"type": "string", "description": "Date in YYYY-MM-DD format."},
-                    "time": {"type": "string", "description": "Start time in HH:MM 24-hour format."},
+                    "time": {"type": "string", "description": "Available slot start time in HH:MM 24-hour format; duration is one hour."},
                 },
                 "required": ["name", "date", "time"],
             },
@@ -75,10 +76,17 @@ class VoiceAssistant:
             {
                 "role": "system",
                 "content": (
-                    "You are a concise, warm appointment receptionist. Today is "
+                    "You are a concise, friendly turf booking assistant for Northside Turf. Today is "
                     f"{date.today().isoformat()}. Use the calendar tools for availability and bookings; "
                     "never claim a booking succeeded unless the tool confirms it. Clarify ambiguous dates, "
-                    "names, and times. Business hours are 09:00-17:00 in half-hour slots. "
+                    "names, and times. There is one field with one-hour slots. Morning session is 06:00-11:00; "
+                    "evening session is 19:00-00:00. Do not offer afternoon availability. "
+                    "Weekday morning slots cost 1500 rupees; weekday evening slots cost 2500 rupees. "
+                    "Weekend morning and evening slots cost 3000 rupees. Quote charges only from tool results. "
+                    "After a successful booking, give a compact receipt on separate lines with exactly: "
+                    "Order ID, Name, Time, Charges. Then remind the player to arrive at the physical counter "
+                    "10 minutes before the booking and pay there; if they do not pay, the slot may be assigned "
+                    "to someone else. Do not say payment has been received; this system takes no payment. "
                     "Speak in natural short sentences suitable for audio."
                 ),
             },
@@ -158,6 +166,7 @@ class VoiceAssistant:
 
             if assistant_tool_calls:
                 messages.append({"role": "assistant", "tool_calls": assistant_tool_calls})
+                confirmed_booking: dict[str, object] | None = None
                 for call in assistant_tool_calls:
                     name = call["function"]["name"]
                     try:
@@ -166,6 +175,8 @@ class VoiceAssistant:
                     except (ValueError, TypeError, KeyError, json.JSONDecodeError) as error:
                         result = {"success": False, "error": str(error)}
                     await on_tool(name, result)
+                    if name == "book_appointment" and result.get("success") is True:
+                        confirmed_booking = result
                     messages.append(
                         {
                             "role": "tool",
@@ -173,6 +184,19 @@ class VoiceAssistant:
                             "content": json.dumps(result),
                         }
                     )
+                if confirmed_booking is not None:
+                    receipt_lines = [
+                        f"Order ID: {confirmed_booking['order_id']}",
+                        f"Name: {confirmed_booking['name']}",
+                        f"Time: {confirmed_booking['time']} to {confirmed_booking['end_time']} on {confirmed_booking['date']}",
+                        f"Charges: ₹{int(confirmed_booking['charges_inr']):,}",
+                        str(confirmed_booking["payment_instructions"]),
+                    ]
+                    for line in receipt_lines:
+                        await on_sentence(line)
+                    visible_response = "\n".join(receipt_lines)
+                    history[:] = messages[1:]
+                    return visible_response
                 continue
 
             break

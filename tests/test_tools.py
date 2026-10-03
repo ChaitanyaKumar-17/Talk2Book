@@ -9,7 +9,7 @@ import unittest
 from datetime import date, timedelta
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 from fastapi.testclient import TestClient
 
@@ -17,6 +17,7 @@ from backend.llm import VoiceAssistant
 from backend import main
 from backend.mock_calendar import CalendarStore
 from backend.stt import DeepgramStream
+from backend.tts import EdgeTtsSynthesizer, prepare_speech_text
 from backend.tools import book_appointment, check_availability
 
 
@@ -29,24 +30,56 @@ class CalendarToolTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.temp_directory.cleanup()
 
-    def test_check_availability_returns_half_hour_slots_in_requested_window(self) -> None:
-        result = check_availability(self.calendar, self.appointment_date, "afternoon")
+    def test_morning_and_evening_return_hourly_turf_slots(self) -> None:
+        morning = check_availability(self.calendar, self.appointment_date, "morning")
+        evening = check_availability(self.calendar, self.appointment_date, "evening")
 
-        self.assertEqual(result["date"], self.appointment_date)
-        self.assertEqual(result["available_slots"][0], "12:00")
-        self.assertEqual(result["available_slots"][-1], "16:30")
-        self.assertTrue(all(slot >= "12:00" for slot in result["available_slots"]))
+        self.assertEqual(morning["date"], self.appointment_date)
+        self.assertEqual([slot["start"] for slot in morning["available_slots"]], [
+            "06:00", "07:00", "08:00", "09:00", "10:00",
+        ])
+        self.assertTrue(all(slot["charges_inr"] == 1500 for slot in morning["available_slots"]))
+        self.assertEqual([slot["start"] for slot in evening["available_slots"]], [
+            "19:00", "20:00", "21:00", "22:00", "23:00",
+        ])
+        self.assertTrue(all(slot["charges_inr"] == 2500 for slot in evening["available_slots"]))
+
+    def test_weekend_morning_and_evening_slots_cost_three_thousand(self) -> None:
+        saturday = "2026-10-03"
+        morning = check_availability(self.calendar, saturday, "morning")
+        evening = check_availability(self.calendar, saturday, "evening")
+
+        self.assertTrue(all(slot["charges_inr"] == 3000 for slot in morning["available_slots"]))
+        self.assertTrue(all(slot["charges_inr"] == 3000 for slot in evening["available_slots"]))
+        booking = book_appointment(self.calendar, "Weekend player", saturday, "19:00")
+        self.assertEqual(booking["charges_inr"], 3000)
+        self.assertEqual(booking["time"], "19:00")
+        self.assertEqual(booking["end_time"], "20:00")
+        self.assertEqual(booking["duration_minutes"], 60)
+        self.assertIn("physical counter 10 minutes before", booking["payment_instructions"])
+
+    def test_any_includes_both_sessions_and_no_midday(self) -> None:
+        result = check_availability(self.calendar, self.appointment_date, "any")
+
+        self.assertEqual(len(result["available_slots"]), 10)
+        self.assertFalse(any(slot["start"].startswith(("11:", "12:", "13:", "14:", "15:", "16:", "17:", "18:")) for slot in result["available_slots"]))
 
     def test_booking_removes_slot_from_availability(self) -> None:
-        booking = book_appointment(self.calendar, "Ada Lovelace", self.appointment_date, "14:00")
+        booking = book_appointment(self.calendar, "Ada Lovelace", self.appointment_date, "07:00")
 
         self.assertTrue(booking["success"])
-        result = check_availability(self.calendar, self.appointment_date, "afternoon")
-        self.assertNotIn("14:00", result["available_slots"])
+        self.assertEqual(booking["end_time"], "08:00")
+        self.assertEqual(booking["duration_minutes"], 60)
+        self.assertRegex(booking["order_id"], r"^NT-\d{8}-\d{6}$")
+        expected_charge = 3000 if date.fromisoformat(self.appointment_date).weekday() >= 5 else 1500
+        self.assertEqual(booking["charges_inr"], expected_charge)
+        self.assertIn("physical counter 10 minutes before", booking["payment_instructions"])
+        result = check_availability(self.calendar, self.appointment_date, "morning")
+        self.assertNotIn("07:00", [slot["start"] for slot in result["available_slots"]])
 
     def test_double_booking_returns_conflict_without_overwriting_first_booking(self) -> None:
-        first = book_appointment(self.calendar, "Ada Lovelace", self.appointment_date, "10:30")
-        second = book_appointment(self.calendar, "Grace Hopper", self.appointment_date, "10:30")
+        first = book_appointment(self.calendar, "Ada Lovelace", self.appointment_date, "20:00")
+        second = book_appointment(self.calendar, "Grace Hopper", self.appointment_date, "20:00")
 
         self.assertTrue(first["success"])
         self.assertFalse(second["success"])
@@ -56,7 +89,37 @@ class CalendarToolTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             check_availability(self.calendar, "next Tuesday", "morning")
         with self.assertRaises(ValueError):
-            book_appointment(self.calendar, "Ada", self.appointment_date, "17:00")
+            book_appointment(self.calendar, "Ada", self.appointment_date, "12:00")
+        with self.assertRaises(ValueError):
+            book_appointment(self.calendar, "Ada", self.appointment_date, "06:30")
+
+
+class SpeechTextTests(unittest.TestCase):
+    def test_formats_dates_times_and_removes_nonspoken_markup(self) -> None:
+        result = prepare_speech_text("**Available** on 2026-09-30 at 13:30 for ₹1,500. Visit https://example.com #4")
+
+        self.assertEqual(result, "Available on September 30, 2026 at 1:30 PM for 1,500 rupees. Visit 4")
+
+    def test_edge_synthesizer_sends_clean_text_and_returns_audio(self) -> None:
+        calls = []
+
+        class FakeCommunicate:
+            def __init__(self, text, voice, *, rate):
+                calls.append((text, voice, rate))
+
+            async def stream(self):
+                yield {"type": "audio", "data": b"mp3-audio"}
+                yield {"type": "SentenceBoundary", "text": "spoken"}
+
+        synthesizer = EdgeTtsSynthesizer()
+        with patch("edge_tts.Communicate", FakeCommunicate):
+            audio = synthesizer.synthesize("Available on 2026-09-30 at 13:30. **Four** slots.")
+
+        self.assertEqual(audio, b"mp3-audio")
+        self.assertEqual(
+            calls,
+            [("Available on September 30, 2026 at 1:30 PM. Four slots.", "en-US-AriaNeural", "+8%")],
+        )
 
 
 class StreamingResponseTests(unittest.IsolatedAsyncioTestCase):
@@ -99,6 +162,70 @@ class StreamingResponseTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(response, "First sentence. Second sentence.")
         self.assertEqual(spoken_sentences, ["First sentence.", "Second sentence."])
+
+    async def test_successful_booking_speaks_structured_order_receipt(self) -> None:
+        booking = {
+            "success": True,
+            "order_id": "NT-20261005-000001",
+            "name": "Asha Patel",
+            "date": "2026-10-05",
+            "time": "06:00",
+            "end_time": "07:00",
+            "charges_inr": 1500,
+            "payment_instructions": "Please arrive at the physical counter 10 minutes before your booking time and pay there. If payment is not completed, this turf slot may be assigned to someone else.",
+        }
+        tool_call = SimpleNamespace(
+            index=0,
+            id="call-booking",
+            function=SimpleNamespace(
+                name="book_appointment",
+                arguments='{"name":"Asha Patel","date":"2026-10-05","time":"06:00"}',
+            ),
+        )
+        chunk = SimpleNamespace(
+            choices=[SimpleNamespace(delta=SimpleNamespace(content=None, tool_calls=[tool_call]))]
+        )
+
+        class FakeStream:
+            async def __aiter__(self):
+                yield chunk
+
+        class FakeCompletions:
+            calls = 0
+
+            async def create(self, **kwargs):
+                self.calls += 1
+                return FakeStream()
+
+        completions = FakeCompletions()
+        assistant = object.__new__(VoiceAssistant)
+        assistant.client = SimpleNamespace(chat=SimpleNamespace(completions=completions))
+        assistant.model = "test-model"
+        spoken: list[str] = []
+        reported: list[dict[str, object]] = []
+
+        async def record_sentence(sentence: str) -> None:
+            spoken.append(sentence)
+
+        async def record_tool(name: str, result: dict[str, object]) -> None:
+            reported.append(result)
+
+        with patch.object(assistant, "_run_tool", return_value=booking):
+            response = await assistant.respond(
+                [{"role": "user", "content": "Book the 6 AM turf slot for Asha Patel."}],
+                record_sentence,
+                record_tool,
+                lambda: None,
+            )
+
+        self.assertIn("Order ID: NT-20261005-000001", response)
+        self.assertIn("Name: Asha Patel", response)
+        self.assertIn("Time: 06:00 to 07:00 on 2026-10-05", response)
+        self.assertIn("Charges: ₹1,500", response)
+        self.assertIn("physical counter 10 minutes before", response)
+        self.assertEqual(spoken, response.split("\n"))
+        self.assertEqual(reported, [booking])
+        self.assertEqual(completions.calls, 1)
 
 
 class DeepgramAdapterTests(unittest.IsolatedAsyncioTestCase):
@@ -158,7 +285,7 @@ class DeepgramAdapterTests(unittest.IsolatedAsyncioTestCase):
     async def test_manual_finalize_uses_buffered_text_from_empty_finalize_result(self) -> None:
         stream = DeepgramStream("test-key", AsyncMock(), AsyncMock(), asyncio.get_running_loop())
         stream._manual_finalize_pending = True
-        stream._final_parts.append("What is open tomorrow afternoon?")
+        stream._final_parts.append("What is open tomorrow morning?")
         result = SimpleNamespace(
             channel=SimpleNamespace(alternatives=[SimpleNamespace(transcript="")]),
             is_final=True,
@@ -169,7 +296,7 @@ class DeepgramAdapterTests(unittest.IsolatedAsyncioTestCase):
         with patch.object(stream, "_dispatch") as dispatch:
             stream._on_transcript(result=result)
 
-        dispatch.assert_called_once_with(stream.on_final, "What is open tomorrow afternoon?")
+        dispatch.assert_called_once_with(stream.on_final, "What is open tomorrow morning?")
         self.assertFalse(stream._manual_finalize_pending)
 
     async def test_transcript_callback_accepts_result_as_argument_and_keyword(self) -> None:
@@ -230,7 +357,7 @@ class TranscriptSubmissionTests(unittest.TestCase):
                 return None
 
             async def finalize(self) -> None:
-                await self.on_final("What is open tomorrow afternoon?")
+                await self.on_final("What is open tomorrow morning?")
 
             async def close(self) -> None:
                 return None
@@ -267,20 +394,20 @@ class TranscriptSubmissionTests(unittest.TestCase):
                 self.assertEqual(websocket.receive_json(), {"type": "status", "value": "finalizing"})
                 self.assertEqual(
                     websocket.receive_json(),
-                    {"type": "transcript", "text": "What is open tomorrow afternoon?", "final": True},
+                    {"type": "transcript", "text": "What is open tomorrow morning?", "final": True},
                 )
                 self.assertEqual(websocket.receive_json(), {"type": "status", "value": "ready_to_send"})
                 self.assertEqual(FakeAssistant.calls, [])
 
                 websocket.send_json(
-                    {"type": "submit_transcript", "text": "What is open tomorrow afternoon?"}
+                    {"type": "submit_transcript", "text": "What is open tomorrow morning?"}
                 )
                 self.assertEqual(websocket.receive_json(), {"type": "status", "value": "thinking"})
                 self.assertEqual(websocket.receive_json()["type"], "audio")
                 self.assertEqual(websocket.receive_json(), {"type": "turn_complete"})
                 self.assertEqual(websocket.receive_json(), {"type": "status", "value": "listening"})
 
-        self.assertEqual(FakeAssistant.calls, ["What is open tomorrow afternoon?"])
+        self.assertEqual(FakeAssistant.calls, ["What is open tomorrow morning?"])
 
 
 if __name__ == "__main__":

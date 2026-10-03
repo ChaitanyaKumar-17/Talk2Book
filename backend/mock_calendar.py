@@ -10,11 +10,13 @@ from collections.abc import Iterator
 
 
 class CalendarStore:
-    """Store booked half-hour appointments in a local SQLite database."""
+    """Store one-hour turf bookings in the morning and evening sessions."""
 
-    OPENING_MINUTE = 9 * 60
-    CLOSING_MINUTE = 17 * 60
-    SLOT_MINUTES = 30
+    SLOT_MINUTES = 60
+    SESSION_WINDOWS = {
+        "morning": ((6 * 60, 11 * 60),),
+        "evening": ((19 * 60, 24 * 60),),
+    }
 
     def __init__(self, database_path: str | Path = "talk2book.sqlite3") -> None:
         self.database_path = str(database_path)
@@ -49,7 +51,7 @@ class CalendarStore:
         try:
             return date.fromisoformat(value)
         except (TypeError, ValueError) as error:
-            raise ValueError("date must use YYYY-MM-DD format") from error
+            raise ValueError("booking date must use YYYY-MM-DD format") from error
 
     @classmethod
     def _parse_time(cls, value: str) -> time:
@@ -58,45 +60,57 @@ class CalendarStore:
         except (TypeError, ValueError) as error:
             raise ValueError("time must use HH:MM format") from error
         if parsed.second or parsed.microsecond:
-            raise ValueError("appointments must start on a half-hour")
+            raise ValueError("turf slots must start on the hour")
         minute_of_day = parsed.hour * 60 + parsed.minute
-        if (
-            minute_of_day < cls.OPENING_MINUTE
-            or minute_of_day >= cls.CLOSING_MINUTE
-            or minute_of_day % cls.SLOT_MINUTES
+        if not any(
+            start <= minute_of_day < end and (minute_of_day - start) % cls.SLOT_MINUTES == 0
+            for windows in cls.SESSION_WINDOWS.values()
+            for start, end in windows
         ):
-            raise ValueError("appointments are available every half-hour from 09:00 to 16:30")
+            raise ValueError("turf slots start hourly from 06:00-10:00 or 19:00-23:00")
         return parsed
 
     @classmethod
-    def _range_bounds(cls, time_range: str) -> tuple[int, int]:
+    def _range_windows(cls, time_range: str) -> tuple[tuple[int, int], ...]:
         normalized = time_range.strip().lower()
-        named_ranges = {
-            "morning": (9 * 60, 12 * 60),
-            "afternoon": (12 * 60, 17 * 60),
-            "evening": (15 * 60, 17 * 60),
-            "any": (cls.OPENING_MINUTE, cls.CLOSING_MINUTE),
-            "all day": (cls.OPENING_MINUTE, cls.CLOSING_MINUTE),
-        }
-        if normalized in named_ranges:
-            return named_ranges[normalized]
+        if normalized == "morning":
+            return cls.SESSION_WINDOWS["morning"]
+        if normalized == "evening":
+            return cls.SESSION_WINDOWS["evening"]
+        if normalized in {"any", "all day"}:
+            return cls.SESSION_WINDOWS["morning"] + cls.SESSION_WINDOWS["evening"]
         if "-" in normalized:
             start_text, end_text = normalized.split("-", maxsplit=1)
             try:
                 start = time.fromisoformat(start_text.strip())
                 end = time.fromisoformat(end_text.strip())
             except ValueError as error:
-                raise ValueError("time_range must be morning, afternoon, evening, or HH:MM-HH:MM") from error
+                raise ValueError("time_range must be morning, evening, any, or HH:MM-HH:MM") from error
             start_minute = start.hour * 60 + start.minute
-            end_minute = end.hour * 60 + end.minute
-            return max(start_minute, cls.OPENING_MINUTE), min(end_minute, cls.CLOSING_MINUTE)
-        raise ValueError("time_range must be morning, afternoon, evening, or HH:MM-HH:MM")
+            end_minute = 24 * 60 if end_text.strip() == "00:00" and start_minute > 0 else end.hour * 60 + end.minute
+            if start.second or start.microsecond or end.second or end.microsecond:
+                raise ValueError("custom turf windows must use whole-hour boundaries")
+            if start_minute >= end_minute:
+                raise ValueError("time_range must have an end later than its start")
+            windows = tuple(
+                (max(start_minute, session_start), min(end_minute, session_end))
+                for session_start, session_end in cls.SESSION_WINDOWS["morning"] + cls.SESSION_WINDOWS["evening"]
+                if max(start_minute, session_start) < min(end_minute, session_end)
+            )
+            if windows:
+                return windows
+            raise ValueError("custom turf windows must overlap 06:00-11:00 or 19:00-00:00")
+        raise ValueError("time_range must be morning, evening, any, or HH:MM-HH:MM")
+
+    @staticmethod
+    def _price_for_slot(booking_date: date, start_time: time) -> int:
+        if booking_date.weekday() >= 5:
+            return 3000
+        return 1500 if start_time.hour < 11 else 2500
 
     def check_availability(self, appointment_date: str, time_range: str) -> dict[str, object]:
         parsed_date = self._parse_date(appointment_date)
-        start_minute, end_minute = self._range_bounds(time_range)
-        if start_minute >= end_minute:
-            raise ValueError("time_range must have an end later than its start")
+        windows = self._range_windows(time_range)
 
         with self._connect() as connection:
             booked_rows = connection.execute(
@@ -106,19 +120,35 @@ class CalendarStore:
         booked = {row["appointment_time"] for row in booked_rows}
 
         slots = []
-        for minute in range(self.OPENING_MINUTE, self.CLOSING_MINUTE, self.SLOT_MINUTES):
-            if start_minute <= minute < end_minute:
-                slot = f"{minute // 60:02d}:{minute % 60:02d}"
-                if slot not in booked:
-                    slots.append(slot)
+        for start_minute, end_minute in windows:
+            for minute in range(start_minute, end_minute, self.SLOT_MINUTES):
+                start_time = f"{minute // 60:02d}:{minute % 60:02d}"
+                end_clock = (minute + self.SLOT_MINUTES) % (24 * 60)
+                end_time = f"{end_clock // 60:02d}:{end_clock % 60:02d}"
+                if start_time not in booked:
+                    start_clock = time.fromisoformat(start_time)
+                    session = "morning" if start_minute < 11 * 60 else "evening"
+                    slots.append(
+                        {
+                            "start": start_time,
+                            "end": end_time,
+                            "session": session,
+                            "charges_inr": self._price_for_slot(parsed_date, start_clock),
+                        }
+                    )
         return {"date": parsed_date.isoformat(), "time_range": time_range, "available_slots": slots}
 
     def book_appointment(self, name: str, appointment_date: str, appointment_time: str) -> dict[str, object]:
         clean_name = name.strip()
         if not clean_name:
-            raise ValueError("name cannot be empty")
+            raise ValueError("player name cannot be empty")
         parsed_date = self._parse_date(appointment_date).isoformat()
-        parsed_time = self._parse_time(appointment_time).strftime("%H:%M")
+        parsed_date_value = date.fromisoformat(parsed_date)
+        parsed_time_value = self._parse_time(appointment_time)
+        parsed_time = parsed_time_value.strftime("%H:%M")
+        end_minute = (parsed_time_value.hour * 60 + self.SLOT_MINUTES) % (24 * 60)
+        end_time = f"{end_minute // 60:02d}:{end_minute % 60:02d}"
+        charges_inr = self._price_for_slot(parsed_date_value, parsed_time_value)
         try:
             with self._connect() as connection:
                 connection.execute("BEGIN IMMEDIATE")
@@ -129,16 +159,24 @@ class CalendarStore:
         except sqlite3.IntegrityError:
             return {
                 "success": False,
-                "error": "That slot has just been booked. Please choose another available time.",
+                "error": "That turf slot has just been booked. Please choose another available time.",
                 "date": parsed_date,
                 "time": parsed_time,
             }
         return {
             "success": True,
+            "order_id": f"NT-{parsed_date.replace('-', '')}-{cursor.lastrowid:06d}",
             "confirmation_id": cursor.lastrowid,
             "name": clean_name,
             "date": parsed_date,
             "time": parsed_time,
+            "end_time": end_time,
+            "duration_minutes": self.SLOT_MINUTES,
+            "charges_inr": charges_inr,
+            "payment_instructions": (
+                "Please arrive at the physical counter 10 minutes before your booking time and pay there. "
+                "If payment is not completed, this turf slot may be assigned to someone else."
+            ),
         }
 
     def list_appointments(self) -> list[dict[str, object]]:

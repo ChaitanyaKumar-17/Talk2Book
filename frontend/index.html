@@ -53,6 +53,12 @@
     .line { max-width: 84%; font-size: 13px; line-height: 1.6; animation: arrive .22s ease-out both; }
     .line.user { align-self: flex-end; padding: 10px 13px; color: #0b160f; background: var(--green); border-radius: 8px 8px 2px 8px; }
     .line.agent { align-self: flex-start; padding: 10px 13px; color: var(--ink); background: #1b2c23; border-radius: 8px 8px 8px 2px; }
+    .line.order-summary { width: min(100%, 390px); padding: 14px 16px; border: 1px solid #345342; background: #15251c; }
+    .order-summary-title { display: block; margin-bottom: 12px; color: var(--green); font-size: 11px; font-family: "DM Mono", monospace; text-transform: uppercase; }
+    .order-summary-grid { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 8px 12px; margin: 0; font-size: 12px; }
+    .order-summary-grid dt { color: var(--muted); }
+    .order-summary-grid dd { margin: 0; color: var(--ink); overflow-wrap: anywhere; }
+    .order-summary-grid dd:last-child { color: var(--lime); font-weight: 800; }
     .line.partial { opacity: .55; }
     .typing-indicator { min-width: 54px; min-height: 36px; display: flex; align-items: center; justify-content: center; gap: 4px; }
     .typing-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: typing-bounce 1.05s infinite ease-in-out; }
@@ -237,6 +243,34 @@
     function hideTypingIndicator() {
       typingIndicator?.remove();
       typingIndicator = null;
+    }
+
+    function addOrderSummary(summary) {
+      document.querySelector("#empty")?.remove();
+      const bubble = document.createElement("section");
+      bubble.className = "line agent order-summary";
+      bubble.setAttribute("aria-label", "Order summary");
+      const title = document.createElement("strong");
+      title.className = "order-summary-title";
+      title.textContent = "Booking details";
+      const grid = document.createElement("dl");
+      grid.className = "order-summary-grid";
+      const rows = [
+        ["Order ID", summary.order_id],
+        ["Name", summary.name],
+        ["Time", summary.time],
+        ["Charges", `₹${Number(summary.charges_inr).toLocaleString("en-IN")}`],
+      ];
+      for (const [label, value] of rows) {
+        const term = document.createElement("dt");
+        term.textContent = label;
+        const description = document.createElement("dd");
+        description.textContent = value;
+        grid.append(term, description);
+      }
+      bubble.append(title, grid);
+      transcriptEl.append(bubble);
+      transcriptEl.scrollTop = transcriptEl.scrollHeight;
     }
 
     function addLine(text, who, partial = false) {
@@ -444,6 +478,7 @@
               if (awaitingReply && assistantTurnFinished) enableMicAfterReply();
             }
           }
+          else if (message.type === "order_summary") addOrderSummary(message.summary);
           else if (message.type === "tool_result") addActivity(message.name, message.result);
           else if (message.type === "turn_complete") { hideTypingIndicator(); speaking = activeSources.size > 0; }
           else if (message.type === "error") { hideTypingIndicator(); addLine(message.message, "agent"); stopSession(); setStatus("error"); }

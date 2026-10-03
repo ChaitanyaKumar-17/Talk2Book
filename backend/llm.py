@@ -68,6 +68,7 @@ class VoiceAssistant:
         on_sentence: SentenceCallback,
         on_tool: ToolCallback,
         on_first_token: Callable[[], None],
+        on_summary: SummaryCallback | None = None,
     ) -> str:
         user_turns = [index for index, message in enumerate(history) if message.get("role") == "user"]
         if len(user_turns) > 6:
@@ -185,16 +186,28 @@ class VoiceAssistant:
                         }
                     )
                 if confirmed_booking is not None:
-                    receipt_lines = [
-                        f"Order ID: {confirmed_booking['order_id']}",
-                        f"Name: {confirmed_booking['name']}",
-                        f"Time: {confirmed_booking['time']} to {confirmed_booking['end_time']} on {confirmed_booking['date']}",
-                        f"Charges: ₹{int(confirmed_booking['charges_inr']):,}",
-                        str(confirmed_booking["payment_instructions"]),
-                    ]
-                    for line in receipt_lines:
-                        await on_sentence(line)
-                    visible_response = "\n".join(receipt_lines)
+                    order_summary: dict[str, object] = {
+                        "order_id": confirmed_booking["order_id"],
+                        "name": confirmed_booking["name"],
+                        "time": f"{confirmed_booking['time']} to {confirmed_booking['end_time']} on {confirmed_booking['date']}",
+                        "charges_inr": int(confirmed_booking["charges_inr"]),
+                    }
+                    heading = "Here is your order summary:"
+                    warning = str(confirmed_booking["payment_instructions"])
+                    await on_sentence(heading)
+                    if on_summary is not None:
+                        await on_summary(order_summary)
+                    await on_sentence(warning)
+                    visible_response = "\n".join(
+                        [
+                            heading,
+                            f"Order ID: {order_summary['order_id']}",
+                            f"Name: {order_summary['name']}",
+                            f"Time: {order_summary['time']}",
+                            f"Charges: ₹{order_summary['charges_inr']:,}",
+                            warning,
+                        ]
+                    )
                     history[:] = messages[1:]
                     return visible_response
                 continue

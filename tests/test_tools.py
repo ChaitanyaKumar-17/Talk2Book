@@ -203,6 +203,7 @@ class StreamingResponseTests(unittest.IsolatedAsyncioTestCase):
         assistant.model = "test-model"
         spoken: list[str] = []
         reported: list[dict[str, object]] = []
+        summaries: list[dict[str, object]] = []
 
         async def record_sentence(sentence: str) -> None:
             spoken.append(sentence)
@@ -210,12 +211,16 @@ class StreamingResponseTests(unittest.IsolatedAsyncioTestCase):
         async def record_tool(name: str, result: dict[str, object]) -> None:
             reported.append(result)
 
+        async def record_summary(summary: dict[str, object]) -> None:
+            summaries.append(summary)
+
         with patch.object(assistant, "_run_tool", return_value=booking):
             response = await assistant.respond(
                 [{"role": "user", "content": "Book the 6 AM turf slot for Asha Patel."}],
                 record_sentence,
                 record_tool,
                 lambda: None,
+                record_summary,
             )
 
         self.assertIn("Order ID: NT-20261005-000001", response)
@@ -223,8 +228,17 @@ class StreamingResponseTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Time: 06:00 to 07:00 on 2026-10-05", response)
         self.assertIn("Charges: ₹1,500", response)
         self.assertIn("physical counter 10 minutes before", response)
-        self.assertEqual(spoken, response.split("\n"))
+        self.assertEqual(spoken, [
+            "Here is your order summary:",
+            booking["payment_instructions"],
+        ])
         self.assertEqual(reported, [booking])
+        self.assertEqual(summaries, [{
+            "order_id": "NT-20261005-000001",
+            "name": "Asha Patel",
+            "time": "06:00 to 07:00 on 2026-10-05",
+            "charges_inr": 1500,
+        }])
         self.assertEqual(completions.calls, 1)
 
 
@@ -368,7 +382,7 @@ class TranscriptSubmissionTests(unittest.TestCase):
             def __init__(self, *args) -> None:
                 pass
 
-            async def respond(self, history, on_sentence, on_tool, on_first_token):
+            async def respond(self, history, on_sentence, on_tool, on_first_token, on_summary=None):
                 self.calls.append(history[-1]["content"])
                 on_first_token()
                 await on_sentence("I found three open slots.")

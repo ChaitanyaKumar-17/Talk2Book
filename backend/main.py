@@ -109,8 +109,11 @@ async def voice_socket(websocket: WebSocket) -> None:
         async def report_tool(name: str, result: dict[str, object]) -> None:
             await send({"type": "tool_result", "name": name, "result": result})
 
+        async def report_summary(summary: dict[str, object]) -> None:
+            await send({"type": "order_summary", "summary": summary})
+
         try:
-            response = await assistant.respond(history, speak, report_tool, mark_first_token)
+            response = await assistant.respond(history, speak, report_tool, mark_first_token, report_summary)
             history.append({"role": "assistant", "content": response or ""})
             await send({"type": "turn_complete"})
         except asyncio.CancelledError:

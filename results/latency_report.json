@@ -167,10 +167,38 @@
       "stt_to_llm_ms": 0.4,
       "llm_time_to_first_token_ms": 766.6,
       "tts_synthesis_seconds": 6.491
+    },
+    {
+      "turn_id": "0ee36ed1-333e-4a4e-b7d9-f5a5c140ae92",
+      "time_to_first_audio_ms": 6137.7,
+      "stt_to_llm_ms": 0.3,
+      "llm_time_to_first_token_ms": 1007.5,
+      "tts_synthesis_seconds": 7.044
+    },
+    {
+      "turn_id": "8f3ef536-a9aa-4ff9-b11c-9372af56b8c9",
+      "time_to_first_audio_ms": 2012.8,
+      "stt_to_llm_ms": 0.3,
+      "llm_time_to_first_token_ms": 925.3,
+      "tts_synthesis_seconds": 2.177
+    },
+    {
+      "turn_id": "6d99d7ef-7038-4d0b-8146-802857aca806",
+      "time_to_first_audio_ms": 1894.1,
+      "stt_to_llm_ms": 0.5,
+      "llm_time_to_first_token_ms": 766.2,
+      "tts_synthesis_seconds": 1.115
+    },
+    {
+      "turn_id": "e9aa90a7-a5e0-4ae3-89ca-b779e8aaa22f",
+      "time_to_first_audio_ms": 4373.6,
+      "stt_to_llm_ms": 0.3,
+      "llm_time_to_first_token_ms": 669.8,
+      "tts_synthesis_seconds": 2.294
     }
   ],
   "summary": {
-    "completed_turns": 21,
+    "completed_turns": 25,
     "median_time_to_first_audio_ms": 3290.7,
     "p95_time_to_first_audio_ms": 35837.1
   }
